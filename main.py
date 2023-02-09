@@ -1,5 +1,5 @@
 import numpy as np
-from Models import beam1 as beam, node, structure
+from Models import beam1 as beam, Node, structure
 from typing import Dict
 from Views.simpleStructure import SimpleStructureView
 
@@ -40,9 +40,9 @@ if __name__ == "__main__":
   beams_map.update({f"{n1},{n2}":(i, n1, n2) for i, n1, n2 in zip(np.arange(n)+beam_index, 1+np.arange(n), 9+np.arange(n))})
   beam_index += n
   
-  nodes: Dict[int, node] = {}
+  nodes: Dict[int, Node] = {}
   for i, x, y, z in nodes_map.values():
-    nodes[i] = node(i, [x, y, z], [0,0,0,0,0,0])
+    nodes[i] = Node(i, [x, y, z], [0,0,0,0,0,0])
 
   nodes[0].addRestraint([1,1,1,1,0,0])
   nodes[8].addRestraint([0,1,1,1,0,0])

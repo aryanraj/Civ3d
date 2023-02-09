@@ -1,11 +1,11 @@
 import numpy as np
 import numpy.typing as npt
-from . import beam1 as beam, node
+from . import beam1 as beam, Node
 from dataclasses import dataclass, field
 
 @dataclass
 class structure:
-  nodes: list[node] = field(repr=False)
+  nodes: list[Node] = field(repr=False)
   beams: list[beam] = field(repr=False)
   nodes_mask: list[npt.NDArray[np.int32]] = field(init=False, default_factory=list, repr=False)
   beams_mask: list[npt.NDArray[np.int32]] = field(init=False, default_factory=list, repr=False)

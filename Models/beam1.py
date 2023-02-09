@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field
-from . import node
+from . import Node
 
 def computePreCrossProductTransform(vec):
   return np.array([[0, -vec[2], vec[1]], [vec[2], 0, -vec[0]], [-vec[1], vec[0], 0]])
@@ -9,10 +9,10 @@ def computePreCrossProductTransform(vec):
 @dataclass
 class beam1:
   id: int
-  A: node
-  B: node
-  i: node
-  j: node
+  A: Node
+  B: Node
+  i: Node
+  j: Node
   EA: float = 1
   EIy: float = 1
   EIz: float = 1
