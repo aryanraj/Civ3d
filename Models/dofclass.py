@@ -35,6 +35,9 @@ class DOFClass():
     cls.RestraintVector[self.id] = self.isRestrained
     cls.DOFList.append(self)
 
+  def __del__(self):
+    raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
+
   @property
   def displacement(self):
     """Displacement Property"""

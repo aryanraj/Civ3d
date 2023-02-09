@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 
 @dataclass
 class FixedBeam:
-  id: int
   i: Node
   j: Node
   EA: float = 1
@@ -19,13 +18,8 @@ class FixedBeam:
   xij: npt.NDArray[np.float64] = field(init=False)
   yij: npt.NDArray[np.float64] = field(init=False)
   zij: npt.NDArray[np.float64] = field(init=False)
-  DOF: list[DOFClass] = field(init=False, default_factory=list)
 
   def __post_init__(self):
-    # Setting up the DOF info
-    self.DOF.extend(self.i.DOF)
-    self.DOF.extend(self.j.DOF)
-
     # Total Length of the beam
     self.L = np.linalg.norm(self.j.coord - self.i.coord)
 
@@ -37,6 +31,13 @@ class FixedBeam:
 
     # Adding Stiffness to DOFclass
     DOFClass.addStiffness(self.DOF, self.Kl)
+  
+  def __del__(self):
+    raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
+
+  @property
+  def DOF(self) -> list[DOFClass]:
+    return self.i.DOF + self.j.DOF
 
   @property
   def Kl(self):
