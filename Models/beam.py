@@ -1,35 +1,44 @@
 import numpy as np
 import numpy.typing as npt
 from . import Node, FixedBeam
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 
 @dataclass
-class Beam(FixedBeam):
+class Beam:
+  nodes: list[Node]
+  EA: InitVar[float] = 1
+  EIy: InitVar[float] = 1
+  EIz: InitVar[float] = 1
+  beta: InitVar[float] = 0 # Angle in degrees
+  A: Node = None
+  B: Node = None
   isConstrainedA: npt.NDArray[np.bool_] = field(default_factory=lambda:np.ones((6,),dtype=np.bool_))
   isConstrainedB: npt.NDArray[np.bool_] = field(default_factory=lambda:np.ones((6,),dtype=np.bool_))
   endStiffnessA: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
   endStiffnessB: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
-  A: Node = None
-  B: Node = None
+  childBeams: list[FixedBeam] = field(init=False, default_factory=list)
 
-  def __post_init__(self):
+  def __post_init__(self, EA:float, EIy:float, EIz:float, beta:float):
+    if len(self.nodes) < 2:
+      raise Exception("Supply minimum of 2 nodes")
     if type(self.isConstrainedA) is list:
       self.isConstrainedA = np.array(self.isConstrainedA, dtype=np.bool_)
     if type(self.isConstrainedB) is list:
       self.isConstrainedB = np.array(self.isConstrainedB, dtype=np.bool_)
     if self.A is None:
-      self.A = self.i
-      self.i = self.A.copy()
-      self.i.addRestraint(np.zeros((6,), dtype=np.bool_))
+      self.A = self.nodes[0]
+      self.nodes[0] = self.A.copy()
+      self.nodes[0].addRestraint(np.zeros((6,), dtype=np.bool_))
     if self.B is None:
-      self.B = self.j
-      self.j = self.B.copy()
-      self.j.addRestraint(np.zeros((6,), dtype=np.bool_))
-    self.A.constrainChildNode(self.i, self.isConstrainedA)
-    self.B.constrainChildNode(self.j, self.isConstrainedB)
-    self.A.addChildNodeStiffness(self.i, self.endStiffnessA)
-    self.B.addChildNodeStiffness(self.j, self.endStiffnessB)
-    super().__post_init__()
+      self.B = self.nodes[-1]
+      self.nodes[-1] = self.B.copy()
+      self.nodes[-1].addRestraint(np.zeros((6,), dtype=np.bool_))
+    self.A.constrainChildNode(self.nodes[0], self.isConstrainedA)
+    self.B.constrainChildNode(self.nodes[-1], self.isConstrainedB)
+    self.A.addChildNodeStiffness(self.nodes[0], self.endStiffnessA)
+    self.B.addChildNodeStiffness(self.nodes[-1], self.endStiffnessB)
+    for nodei, nodej in zip(self.nodes[:-1], self.nodes[1:]):
+      self.childBeams.append(FixedBeam(nodei, nodej, EA, EIy, EIz, beta))
 
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
@@ -46,7 +55,14 @@ class Beam(FixedBeam):
       endStiffnessA = np.diag(endStiffnessA)
     if type(endStiffnessB) is list or endStiffnessB.ndim == 1:
       endStiffnessB = np.diag(endStiffnessB)
-    self.A.addChildNodeStiffness(self.i, endStiffnessA)
-    self.B.addChildNodeStiffness(self.j, endStiffnessB)
+    self.A.addChildNodeStiffness(self.nodes[0], endStiffnessA)
+    self.B.addChildNodeStiffness(self.nodes[-1], endStiffnessB)
     self.endStiffnessA += endStiffnessA
     self.endStiffnessB += endStiffnessB
+
+  def addUDL(self, dir: float, val: float) -> None:
+    for childBeam in self.childBeams:
+      childBeam.addUDL(dir, val)
+
+  def addPointLoad(self, dir:int, val: float, dist: float) -> None:
+    raise NotImplementedError("Future feature")
