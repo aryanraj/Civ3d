@@ -40,7 +40,7 @@ class Node:
       if not _res and _DOF.isRestrained:
         _DOF.removeRestraint()
   
-  def constrainChildNode(self, childNode: Node, constraints: npt.NDArray[np.bool_]):
+  def getConstraintMatrixFor(self, childNode: Node) -> npt.NDArray[np.float64]:
     # Computing Transformation matrix in parent local axis
     TransformationMartix = np.eye(6, dtype=np.float64)
     V = childNode.coord - self.coord
@@ -50,13 +50,24 @@ class Node:
     BasisChangeMartix[0:3, 0:3] = np.array([_.dir for _ in childNode.DOF[0:3]]) @ np.array([_.dir for _ in self.DOF[0:3]]).T
     BasisChangeMartix[3:6, 3:6] = np.array([_.dir for _ in childNode.DOF[3:6]]) @ np.array([_.dir for _ in self.DOF[3:6]]).T
     # Transformation matrix in Child Basis
-    Tgl = BasisChangeMartix @ TransformationMartix
-    for _constraint, _Tgl, _localDOF in zip(constraints, Tgl, childNode.DOF):
+    return BasisChangeMartix @ TransformationMartix
+
+  def constrainChildNode(self, childNode: Node, constraints: npt.NDArray[np.bool_]):
+    constraintMatrix = self.getConstraintMatrixFor(childNode)
+    for _constraint, _Tgl, _localDOF in zip(constraints, constraintMatrix, childNode.DOF):
       if not _constraint: continue
       _localDOF.addConstraint(self.DOF,_Tgl)
 
-  def addStiffness(self, arg: npt.NDArray[np.float64]):
-    DOFClass.addStiffness(self.DOF, arg)
+  def addChildNodeStiffness(self, childNode: Node, K6: npt.NDArray[np.float64]):
+    if K6.ndim != 2 or K6.shape != (6,6):
+      raise Exception("Stiffness matrix must be 2-Dimensional of size (6,6)")
+    C6 = self.getConstraintMatrixFor(childNode)
+    K12 = np.vstack((np.hstack((K6, -K6)), np.hstack((-K6, K6))))
+    C12 = np.vstack((np.hstack((C6, np.zeros((6,6)))), np.hstack((np.zeros((6,6)),np.eye(6)))))
+    DOFClass.addStiffness(self.DOF+childNode.DOF, C12.T @ K12 @ C12)
+
+  def addStiffness(self, K: npt.NDArray[np.float64]):
+    DOFClass.addStiffness(self.DOF, K)
 
   def copy(self):
     cls = type(self)
