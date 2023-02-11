@@ -11,7 +11,6 @@ MAX_DOF: int = int(os.getenv("MAX_DOF", 10000))
 @dataclass
 class DOFClass():
   id: int = field(init=False, default_factory=count().__next__)
-  dir: npt.NDArray[np.float64]
   isRestrained: bool = False
   constraints: tuple[list[DOFClass],list[float]] | None = field(init=False, default=None)
 
@@ -27,8 +26,6 @@ class DOFClass():
   RestraintVector: ClassVar[npt.NDArray[np.bool_]] = np.zeros((MAX_DOF,), dtype=np.bool_)
 
   def __post_init__(self):
-    if type(self.dir) is list:
-      self.dir = np.array(self.dir, dtype=np.float64)
     if not type(self.isRestrained) is bool:
       self.isRestrained = bool(self.isRestrained)
     cls = type(self)
@@ -155,4 +152,4 @@ class DOFClass():
 
   @classmethod
   def createCopy(cls, obj:DOFClass) -> DOFClass:
-    return cls(obj.dir)
+    return cls(obj.isRestrained)

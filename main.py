@@ -1,59 +1,46 @@
+import os
+os.environ["MAX_DOF"] = str(300)
+
 import numpy as np
-from Models import beam1 as beam, Node, structure
-from typing import Dict
-from Views.simpleStructure import SimpleStructureView
+from Models import DOFClass, Node, Beam
+from Views.simpleStructure import SimpleView
 
 if __name__ == "__main__":
-  nodes_map = {}
-  beams_map = {}
-  node_index = 0
-  beam_index = 0
+  nodes:list[Node] = []
+  beams:list[Beam] = []
   
   # Bottom Chord nodes
-  n = 9
-  nodes_map.update({f"{x},{y},{z}":(i, x, y, z) for i, x, y, z in zip(np.arange(n)+node_index, np.arange(n)*5.905, np.zeros(n), np.zeros(n))})
-  node_index += n
-  
+  nBottomNodes = 9
+  nodes.extend([Node(coord) for coord in zip(np.arange(nBottomNodes)*5.905, np.zeros(nBottomNodes), np.zeros(nBottomNodes))])
+  nodes[0].addRestraint([1,1,1,0,0,0])
+  nodes[-1].addRestraint([0,1,1,0,0,0])
   
   # Top Chord nodes
-  n = 7
-  nodes_map.update({f"{x},{y},{z}":(i, x, y, z) for i, x, y, z in zip(np.arange(n)+node_index, 5.905+np.arange(n)*5.905, np.zeros(n), 7.315+np.zeros(n))})
-  node_index += n
+  nTopNodes = nBottomNodes - 2
+  nodes.extend([Node(coord) for coord in zip(5.905+np.arange(nTopNodes)*5.905, np.zeros(nTopNodes), 7.315+np.zeros(nTopNodes))])
   
   # Bottom Chord beams
-  n = 8
-  beams_map.update({f"{n1},{n2}":(i, n1, n2) for i, n1, n2 in zip(np.arange(n)+beam_index, 0+np.arange(n), 1+np.arange(n))})
-  beam_index += n
+  bottomChordBeam = Beam(nodes[:nBottomNodes])
+  beams.append(bottomChordBeam)
   
   # Top Chord beams
-  n = 6
-  beams_map.update({f"{n1},{n2}":(i, n1, n2) for i, n1, n2 in zip(np.arange(n)+beam_index, 9+np.arange(n), 10+np.arange(n))})
-  beam_index += n
+  topChordBeam = Beam(nodes[nBottomNodes:nBottomNodes+nTopNodes])
+  beams.append(topChordBeam)
   
   # Diagonal beams
-  n = 8
-  beams_map.update({f"{n1},{n2}":(i, n1, n2) for i, n1, n2 in zip(np.arange(n)+beam_index, [0,2,2,4,4,6,6,8], [9,9,11,11,13,13,15,15])})
-  beam_index += n
+  diagnoalBeams = [Beam([nodes[n1], nodes[n2]]) for n1, n2 in zip([0,2,2,4,4,6,6,8], [9,9,11,11,13,13,15,15])]
+  beams.extend(diagnoalBeams)
   
   # Vertical beams
-  n = 7
-  beams_map.update({f"{n1},{n2}":(i, n1, n2) for i, n1, n2 in zip(np.arange(n)+beam_index, 1+np.arange(n), 9+np.arange(n))})
-  beam_index += n
+  verticalBeams = [Beam([nodes[n1], nodes[n2]]) for n1, n2 in zip(1+np.arange(nTopNodes), nBottomNodes+np.arange(nTopNodes))]
+  beams.extend(verticalBeams)
   
-  nodes: Dict[int, Node] = {}
-  for i, x, y, z in nodes_map.values():
-    nodes[i] = Node(i, [x, y, z], [0,0,0,0,0,0])
+  # Add Load on Bottom Chord
+  bottomChordBeam.addUDL(1,-10)
+  DOFClass.analyse()
 
-  nodes[0].addRestraint([1,1,1,1,0,0])
-  nodes[8].addRestraint([0,1,1,1,0,0])
+  # Display
+  SimpleView().display(nodes, beams)
 
-  beams: Dict[int, beam] = {}
-  for i, n1, n2 in beams_map.values():
-    beams[i] = beam(i, nodes[n1], nodes[n2], nodes[n1], nodes[n2])
-  
-  s = structure(nodes.values(), beams.values())
-  s.solve()
-  # print(s.Kg)
-
-  view = SimpleStructureView(s)
-  view.display()
+  np.set_printoptions(suppress=True) # To suppress exponential notation
+  print(np.hstack([DOFClass.ActionVector, DOFClass.ReactionVector, DOFClass.DisplacementVector]))

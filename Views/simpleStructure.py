@@ -3,15 +3,19 @@ from OCC.Core.AIS import AIS_Shape
 from OCC.Core.gp import gp_Pnt, gp_Ax2, gp_Dir, gp_Vec
 from OCC.Display.SimpleGui import init_display
 from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB
-from Models import structure
-from dataclasses import dataclass
+from typing import Union
+from Models import Node, FixedBeam, Beam
 
-@dataclass
-class SimpleStructureView():
-  sObj: structure
-  def display(self):
+class SimpleView():
+  def display(self, nodes:list[Node] = [], beamsORfixedbeams:list[Union[Beam, FixedBeam]] = []):
+    beams:list[FixedBeam] = []
+    if len(beamsORfixedbeams) != 0 and type(beamsORfixedbeams[0]) is Beam:
+      for _ in beamsORfixedbeams:
+        beams.extend(_.childBeams)
+    elif len(beamsORfixedbeams) != 0 and type(beamsORfixedbeams[0]) is FixedBeam:
+      beams.extend(beamsORfixedbeams)
     nodes_ais = []
-    for node in self.sObj.nodes:
+    for node in nodes:
       # Create sphere with a radius of 100
       sphere = BRepPrimAPI_MakeSphere(gp_Pnt(*node.coord*1000), 100)
       sphere.Build()
@@ -28,7 +32,7 @@ class SimpleStructureView():
       nodes_ais.append(ais_sphere)
 
     beams_ais = []
-    for beam in self.sObj.beams:
+    for beam in beams:
       dir = gp_Dir(gp_Vec(gp_Pnt(*beam.i.coord*1000), gp_Pnt(*beam.j.coord*1000)))
       ax = gp_Ax2(gp_Pnt(*beam.i.coord*1000), dir)
       cylinder = BRepPrimAPI_MakeCylinder(ax, 50, beam.L*1000)

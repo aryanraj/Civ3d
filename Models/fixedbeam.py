@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.typing as npt
-from . import Node, DOFClass
 from dataclasses import dataclass, field
+from . import Node, DOFClass
+from .utils import getAxisFromTwoNodesAndBeta
 
 @dataclass
 class FixedBeam:
@@ -10,14 +11,13 @@ class FixedBeam:
   EA: float = 1
   EIy: float = 1
   EIz: float = 1
+  GJx: float = 0
   beta: float = 0 # Angle in degrees
   
   UDL: list[tuple[float]] = field(init=False, default_factory=list)
   PointLoad: list[tuple[float]] = field(init=False, default_factory=list)
   L: float = field(init=False)
-  xij: npt.NDArray[np.float64] = field(init=False)
-  yij: npt.NDArray[np.float64] = field(init=False)
-  zij: npt.NDArray[np.float64] = field(init=False)
+  axis: npt.NDArray[np.float64] = field(init=False)
 
   def __post_init__(self):
     # Total Length of the beam
@@ -25,9 +25,7 @@ class FixedBeam:
 
     # Calculating local directions
     # TODO: Currently it is assumed that both nodes axis are parallel to the beam
-    self.xij = (self.j.coord - self.i.coord)/self.L
-    self.yij = computeLocalYAxis(self.xij, self.beta)
-    self.zij = np.cross(self.xij, self.yij)
+    self.axis = getAxisFromTwoNodesAndBeta(self.i.coord, self.j.coord, self.beta)
 
     # Adding Stiffness to DOFclass
     DOFClass.addStiffness(self.DOF, self.Kl)
@@ -108,17 +106,3 @@ class FixedBeam:
       forcel[4] += val*a*b**2/self.L**2
       forcel[10] -= val*b*a**2/self.L**2
     self.addLocalFEForce(forcel)
-
-def computeLocalYAxis(dirX: npt.NDArray, beta: float):
-  """
-  Using Rodrigues' rotation formula for performing a rotation for beta angle
-  For more details goto https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
-  """
-  unrotated = np.array([-dirX[1], dirX[0], 0])
-  K = computePreCrossProductTransform(dirX)
-  R: npt.NDArray[np.float64] = np.identity(3) + np.sin(beta/(2*np.pi))*K + (1 - np.cos(beta/(2*np.pi))) * K @ K
-  return unrotated @ R.T
-
-def computePreCrossProductTransform(vec: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-  return np.array([[0, -vec[2], vec[1]], [vec[2], 0, -vec[0]], [-vec[1], vec[0], 0]])
-
