@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
 from . import Node, FixedBeam
-from .utils import getAxisFromTwoNodesAndBeta
+from . import utils
 
 @dataclass
 class Beam:
@@ -20,33 +20,33 @@ class Beam:
   endStiffnessB: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
   childBeams: list[FixedBeam] = field(init=False, default_factory=list)
 
-  def __post_init__(self, *args, beta):
+  def __post_init__(self, *args):
     if len(self.nodes) < 2:
       raise Exception("Supply minimum of 2 nodes")
-    if type(self.isConstrainedA) is list:
-      self.isConstrainedA = np.array(self.isConstrainedA, dtype=np.bool_)
-    if type(self.isConstrainedB) is list:
-      self.isConstrainedB = np.array(self.isConstrainedB, dtype=np.bool_)
+    self.isConstrainedA = utils.ensure1DNumpyArray(self.isConstrainedA, np.bool_)
+    self.isConstrainedB = utils.ensure1DNumpyArray(self.isConstrainedB, np.bool_)
     if self.A is None:
       self.A = self.nodes[0]
       self.nodes[0] = Node(
         self.A.coord,
         np.zeros((6,), dtype=np.bool_),
         self.A.Kg,
-        getAxisFromTwoNodesAndBeta(self.A.coord, self.nodes[1].coord, beta))
+        utils.getAxisFromTwoNodesAndBeta(self.A.coord, self.nodes[1].coord, beta=args[-1])
+      )
     if self.B is None:
       self.B = self.nodes[-1]
       self.nodes[-1] = Node(
         self.B.coord,
         np.zeros((6,), dtype=np.bool_),
         self.A.Kg,
-        getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.B.coord, beta))
+        utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.B.coord, beta=args[-1])
+      )
     self.A.constrainChildNode(self.nodes[0], self.isConstrainedA)
     self.B.constrainChildNode(self.nodes[-1], self.isConstrainedB)
     self.A.addChildNodeStiffness(self.nodes[0], self.endStiffnessA)
     self.B.addChildNodeStiffness(self.nodes[-1], self.endStiffnessB)
     for nodei, nodej in zip(self.nodes[:-1], self.nodes[1:]):
-      self.childBeams.append(FixedBeam(nodei, nodej, *args, beta))
+      self.childBeams.append(FixedBeam(nodei, nodej, *args))
 
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")

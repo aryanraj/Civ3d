@@ -3,7 +3,7 @@ import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
 from . import DOFClass
-from .utils import computePreCrossProductTransform
+from . import utils
 
 @dataclass
 class Node:
@@ -17,16 +17,10 @@ class Node:
   force: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((6,1)))
 
   def __post_init__(self, restraint):
-    if not type(restraint) in [list, np.array]:
-      restraint = np.zeros((6,), dtype=np.bool_)
-    if type(restraint) in [list,tuple]:
-      restraint = np.array([restraint], dtype=np.bool_).T
-    if type(self.coord) in [list, tuple]:
-      self.coord = np.array(self.coord, dtype=np.float64)
-    if type(self.Kg) is list:
-      self.Kg = np.array(self.Kg, dtype=np.float64)
-    if type(self.axis) is list:
-      self.axis = np.array(self.axis, dtype=np.float64)
+    restraint = utils.ensure1DNumpyArray(restraint, np.bool_, np.zeros((6,),dtype=np.bool_))
+    self.coord = utils.ensure1DNumpyArray(self.coord, np.float64)
+    self.Kg = utils.ensure2DSquareNumpyArray(self.Kg, np.float64)
+    self.axis = utils.ensure2DSquareNumpyArray(self.axis, np.float64)
     self.DOF = [DOFClass(res) for res in restraint]
 
   def __del__(self):
@@ -48,11 +42,11 @@ class Node:
     # Computing Transformation matrix in parent local axis
     TransformationMartix = np.eye(6, dtype=np.float64)
     V = childNode.coord - self.coord
-    TransformationMartix[0:3, 3:6] = -computePreCrossProductTransform(V)
+    TransformationMartix[0:3, 3:6] = -utils.computePreCrossProductTransform(V)
     # Change Basis from Parent axis to child axis
     BasisChangeMartix = np.zeros((6,6), dtype=np.float64)
-    BasisChangeMartix[0:3, 0:3] = np.array(childNode.axis) @ np.array(self.axis).T
-    BasisChangeMartix[3:6, 3:6] = np.array(childNode.axis) @ np.array(self.axis).T
+    BasisChangeMartix[0:3, 0:3] = utils.globalToLocalBasisChangeMatrix(self.axis, childNode.axis)
+    BasisChangeMartix[3:6, 3:6] = utils.globalToLocalBasisChangeMatrix(self.axis, childNode.axis)
     # Transformation matrix in Child Basis
     return BasisChangeMartix @ TransformationMartix
 
