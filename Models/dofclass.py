@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from itertools import count
 import os
 
-MAX_DOF: int = int(os.getenv("MAX_DOF", 10000))
+MAX_DOF: int = int(os.getenv("MAX_DOF", 2000))
 
 @dataclass
 class DOFClass():
