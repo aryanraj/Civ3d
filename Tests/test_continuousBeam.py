@@ -1,5 +1,5 @@
 import os
-os.environ["MAX_DOF"] = str(42)
+os.environ["MAX_DOF"] = str(30)
 
 from Models import DOFClass, Node, BeamSection, Beam
 n0 = Node([0,0,0], [1, 1, 1, 1, 1, 1])
@@ -9,18 +9,15 @@ n3 = Node([9,0,0])
 n4 = Node([10,0,0], [1, 1, 1, 1, 1, 1])
 
 section = BeamSection()
-b1 = Beam([n1, n2], section, A=n0, isConstrainedA=[1,1,1,1,1,0])
-b2 = Beam([n2, n3], section, B=n4, isConstrainedB=[1,1,1,1,1,0])
+b1 = Beam([n1, n2, n3], section, A=n0, B=n4, isConstrainedA=[1,1,1,1,1,0], isConstrainedB=[1,1,1,1,1,0])
 b1.addUDL(1, -10)
-b2.addUDL(1, -10)
 DOFClass.analyse()
 
 b1.addUDL(1, -10)
-b2.addUDL(1, -10)
-b1.addSimpleEndStiffness(endStiffnessA=[0,0,0,0,0,1])
-b2.addSimpleEndStiffness(endStiffnessB=[0,0,0,0,0,1])
+b1.addSimpleEndStiffness(endStiffnessA=[0,0,0,0,0,1], endStiffnessB=[0,0,0,0,0,1])
 DOFClass.analyse()
 
 print(DOFClass.DisplacementVector)
 print(DOFClass.ActionVector)
 print(DOFClass.ReactionVector)
+

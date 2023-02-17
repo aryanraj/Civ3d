@@ -1,17 +1,14 @@
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field
-from . import Node, DOFClass
+from . import DOFClass, Node, BeamSection 
 from .utils import getAxisFromTwoNodesAndBeta, globalToLocalBasisChangeMatrix
 
 @dataclass
 class FixedBeam:
   i: Node
   j: Node
-  EA: float = 1
-  EIy: float = 1
-  EIz: float = 1
-  GJx: float = 0
+  section: BeamSection
   beta: float = 0 # Angle in degrees
   
   UDL: list[tuple[float]] = field(init=False, default_factory=list)
@@ -31,6 +28,22 @@ class FixedBeam:
   
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
+  
+  @property
+  def EA(self) -> float:
+    return self.section.E * self.section.Area
+
+  @property
+  def EIy(self) -> float:
+    return self.section.E * self.section.Iyy
+
+  @property
+  def EIz(self) -> float:
+    return self.section.E * self.section.Izz
+
+  @property
+  def GJx(self) -> float:
+    return self.section.G * self.section.Ixx
 
   @property
   def DOF(self) -> list[DOFClass]:

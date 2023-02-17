@@ -1,11 +1,12 @@
 import os
 os.environ["MAX_DOF"] = str(24)
 
-from Models import DOFClass, Node, FixedBeam
+from Models import DOFClass, Node, BeamSection, FixedBeam
 n1 = Node([0,0,0], [1, 1, 1, 1, 1, 1])
 n2 = Node([10,0,0], [1, 1, 1, 1, 1, 1])
 
-b1 = FixedBeam(n1, n2)
+section = BeamSection()
+b1 = FixedBeam(n1, n2, section)
 b1.addUDL(1, -10)
 DOFClass.analyse()
 
