@@ -124,6 +124,7 @@ class DOFClass():
     mask = ~cls.RestraintVector.toarray().flatten()
 
     # Filter out DOFs which have zero stiffness and zero unbalanced force
+    # TODO: Fix this part using LU_factor and LU_solve
     for i, _Kg, _force in zip(range(len(mask)), Kg, force):
       if cls.RestraintVector[i,0]: continue
       if np.all(_Kg.toarray() == 0) and np.all(_force.toarray() == 0):
