@@ -8,6 +8,8 @@ class BeamSection:
   Izz: float = 1.
   E: float = 1.
   mu: float = 0.3
+  rho: float = 1
+  rhog: float = 9.806
 
   @property
   def G(self) -> float:

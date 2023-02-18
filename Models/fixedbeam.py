@@ -100,7 +100,7 @@ class FixedBeam:
     for _DOF, _force in zip(self.DOF, forceg):
       _DOF.addFixedEndReaction(_force)
 
-  def addUDL(self, dir: float, val: float) -> None:
+  def addUDL(self, dir: int, val: float) -> None:
     self.UDL.append((dir, val))
     forcel = np.zeros((12,1))
     if dir == 0:
@@ -137,3 +137,15 @@ class FixedBeam:
       forcel[4] += val*a*b**2/self.L**2
       forcel[10] -= val*b*a**2/self.L**2
     self.addLocalFEForce(forcel)
+
+  def addSelfWeight(self, dir:int) -> None:
+    udl = self.section.Area * self.section.rhog
+    if dir == 0:
+      globalDir = np.array([1,0,0])
+    elif dir == 1:
+      globalDir = np.array([0,1,0])
+    else:
+      globalDir = np.array([0,0,1])
+    self.addUDL(0, udl*np.dot(globalDir, self.axis[0]))
+    self.addUDL(1, udl*np.dot(globalDir, self.axis[1]))
+    self.addUDL(2, udl*np.dot(globalDir, self.axis[2]))
