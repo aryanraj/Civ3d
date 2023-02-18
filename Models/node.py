@@ -66,3 +66,6 @@ class Node:
 
   def addStiffness(self, K: npt.NDArray[np.float64]):
     DOFClass.addStiffness(self.DOF, K)
+
+  def getReaction(self):
+    return [_.reaction for _ in self.DOF]
