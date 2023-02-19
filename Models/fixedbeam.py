@@ -138,8 +138,8 @@ class FixedBeam:
       forcel[10] -= val*b*a**2/self.L**2
     self.addLocalFEForce(forcel)
 
-  def addSelfWeight(self, dir:int) -> None:
-    udl = self.section.Area * self.section.rhog
+  def addSelfWeight(self, dir:int, factor:float=-1) -> None:
+    udl = self.section.Area * self.section.rhog * factor
     if dir == 0:
       globalDir = np.array([1,0,0])
     elif dir == 1:
