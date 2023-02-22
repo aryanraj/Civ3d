@@ -19,6 +19,7 @@ class DOFClass():
   # Class Variables
   DOFList: ClassVar[list[DOFClass]] = []
   StiffnessMatrix: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_DOF), dtype=np.float64)
+  MassMatrix: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_DOF), dtype=np.float64)
   ConstraintMatrix: ClassVar[sp.lil_array] = sp.lil_array(sp.eye(MAX_DOF, dtype=np.float64))
   ReactionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   ActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
@@ -115,6 +116,10 @@ class DOFClass():
     self.StiffnessMatrix[np.ix_([_.id for _ in DOFs],[_.id for _ in DOFs])] += K
 
   @classmethod
+  def addMass(self, DOFs:list[DOFClass], M:npt.NDArray[np.float64]):
+    self.MassMatrix[np.ix_([_.id for _ in DOFs],[_.id for _ in DOFs])] += M
+
+  @classmethod
   def analyse(cls):
     Kg = cls.ConstraintMatrix.T @ cls.StiffnessMatrix @ cls.ConstraintMatrix
     disp = cls.ConstraintMatrix @ cls.ImbalancedDisplacementVector
@@ -152,6 +157,27 @@ class DOFClass():
     cls.ReactionVector -= force
     cls.ImbalancedDisplacementVector[:,0] = 0
     cls.ImbalancedForceVector[:,0] = 0
+
+  @classmethod
+  def eig(cls, nModes):
+    Kg = cls.ConstraintMatrix.T @ cls.StiffnessMatrix @ cls.ConstraintMatrix
+    Mg = cls.ConstraintMatrix.T @ cls.MassMatrix @ cls.ConstraintMatrix
+
+    # Mask for all the DOFs which are not restraints
+    mask = ~cls.RestraintVector.toarray().flatten()
+
+    # Filter out DOFs which have zero stiffness
+    # TODO: Fix this part using LU_factor and LU_solve
+    for i, _Kg in zip(range(len(mask)), Kg, Mg):
+      if cls.RestraintVector[i,0]: continue
+      if np.all(_Kg.toarray() == 0):
+        mask[i] = False
+    
+    # Do not proceed if the DOF mask is empty
+    if np.any(mask):
+      K11 = Kg[np.ix_(mask, mask)]
+      M11 = Mg[np.ix_(mask, mask)]
+      return splinalg.eigsh(K11, nModes, M11, sigma=0)
 
   @classmethod
   def createCopy(cls, obj:DOFClass) -> DOFClass:
