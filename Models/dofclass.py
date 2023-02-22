@@ -178,7 +178,3 @@ class DOFClass():
       K11 = Kg[np.ix_(mask, mask)]
       M11 = Mg[np.ix_(mask, mask)]
       return splinalg.eigsh(K11, nModes, M11, sigma=0)
-
-  @classmethod
-  def createCopy(cls, obj:DOFClass) -> DOFClass:
-    return cls(obj.isRestrained)
