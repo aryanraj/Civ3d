@@ -182,4 +182,11 @@ class DOFClass():
     if np.any(mask):
       K11 = Kg[np.ix_(mask, mask)]
       M11 = Mg[np.ix_(mask, mask)]
-      return splinalg.eigsh(K11, nModes, M11, sigma=0)
+      D,V = splinalg.eigsh(K11, nModes, M11, sigma=0)
+      # TODO: Check implementation for rotational DOFs
+      DispDirMatrix = np.array([list(_.dir) + [0]*3 if _.represents is DOFTypes.DISPLACEMENT else [0]*3 + list(_.dir) for _ in cls.DOFList if mask[_.id]])
+      ParticipationFactor = V.T @ M11 @ DispDirMatrix
+      EffectiveMass = ParticipationFactor**2
+      TotalMass = np.diag(DispDirMatrix.T @ M11 @ DispDirMatrix)
+      MassParticipationFactor = EffectiveMass/TotalMass
+      return D, V, EffectiveMass, MassParticipationFactor
