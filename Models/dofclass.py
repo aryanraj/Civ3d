@@ -168,7 +168,7 @@ class DOFClass():
 
     # Filter out DOFs which have zero stiffness
     # TODO: Fix this part using LU_factor and LU_solve
-    for i, _Kg in zip(range(len(mask)), Kg, Mg):
+    for i, _Kg in zip(range(len(mask)), Kg):
       if cls.RestraintVector[i,0]: continue
       if np.all(_Kg.toarray() == 0):
         mask[i] = False
