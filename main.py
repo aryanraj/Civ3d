@@ -172,25 +172,32 @@ def createLaterals(nodeA1:Node, nodeA2:Node, nodeB1:Node, nodeB2:Node, section:B
 if __name__ == "__main__":
   nodes: list[Node] = []
   beams: list[Beam] = []
+  # Increase the density and mass to simulate the additional loads on the members
   sections: dict[str, BeamSection] = {
-    "BottomChordL0L2": BeamSection(0.0259569, 0.0000079543, 0.000423932, 0.00136674, 200_000_000_000, 0.3, 7860, 77075.16),
-    "BottomChordL2L4": BeamSection(0.0159569, 0.00000323187, 0.000310969, 0.000839274, 200_000_000_000, 0.3, 7860, 77075.16),
-    "TopChordU1U3": BeamSection(0.0164833, 0, 0.000424139, 0.000729281, 200_000_000_000, 0.3, 7860, 77075.16),
-    "TopChordU3U4": BeamSection(0.0202769, 0.00000499706, 0.000508988, 0.000799148, 200_000_000_000, 0.3, 7860, 77075.16),
-    "EndRakerL0U1": BeamSection(0.0231169, 0.00000504102, 0.000495082, 0.0010982, 200_000_000_000, 0.3, 7860, 77075.16),
-    "PortalGirderU1": BeamSection(0.0083, 0.000000413677, 0.000259889, 0.0000133692, 200_000_000_000, 0.3, 7860, 77075.16),
-    "Verticals": BeamSection(0.0088, 0.000000444356, 0.0000133733, 0.000332293, 200_000_000_000, 0.3, 7860, 77075.16),
-    "DiagonalsU1L2": BeamSection(0.0127569, 0.0000026403, 0.000304142, 0.000660718, 200_000_000_000, 0.3, 7860, 77075.16),
-    "DiagonalsU3L2": BeamSection(0.0092583, 0, 0.000128362, 0.00048099, 200_000_000_000, 0.3, 7860, 77075.16),
-    "CrossGirders": BeamSection(0.02535, 0.00000431878, 0.0043298, 0.000213411, 200_000_000_000, 0.3, 7860, 77075.16),
-    "SwayGirders": BeamSection(0.00384487, 0.000000148625, 0.000144009, 0.00000434948, 200_000_000_000, 0.3, 7860, 77075.16),
-    "BottomLateralBracing": BeamSection(0.00383182, 0.000000140658, 0.00000792087, 0.00000792087, 200_000_000_000, 0.3, 7860, 77075.16),
-    "TopLateralBracing": BeamSection(0.00360566, 0.000000213409, 0.0000130409, 0.00000350786, 200_000_000_000, 0.3, 7860, 77075.16),
-    "StringerMain": BeamSection(0.01831, 0.00000210773, 0.00190898, 0.000104873, 200_000_000_000, 0.3, 7860, 77075.16),
-    "StringerCross": BeamSection(0.00637843, 0.000000406964, 0.000152071, 0.00000504857, 200_000_000_000, 0.3, 7860, 77075.16),
-    "StringerLateralBracing": BeamSection(0.001402, 0.00000004666666, 0.000000714, 0.000000714, 200_000_000_000, 0.3, 7860, 77075.16),
-    "KneeBracing": BeamSection(0.0028, 0.0000000933333333, 0.0000014495610119, 0.0000035533333333, 200_000_000_000, 0.3, 7860, 77075.16),
+    "BottomChordL0L2": BeamSection(0.0259569, 0.0000079543, 0.000423932, 0.00136674, 200_000_000_000, 0.3, 9946, 97530.476),
+    "BottomChordL2L4": BeamSection(0.0159569, 0.00000323187, 0.000310969, 0.000839274, 200_000_000_000, 0.3, 9946, 97530.476),
+    "TopChordU1U3": BeamSection(0.0164833, 0.00000499706, 0.000424139, 0.000729281, 200_000_000_000, 0.3, 9946, 97530.476),
+    "TopChordU3U4": BeamSection(0.0202769, 0.00000499706, 0.000508988, 0.000799148, 200_000_000_000, 0.3, 9946, 97530.476),
+    "EndRakerL0U1": BeamSection(0.0231169, 0.00000504102, 0.000495082, 0.0010982, 200_000_000_000, 0.3, 9946, 97530.476),
+    "PortalGirderU1": BeamSection(0.0083, 0.000000413677, 0.000259889, 0.0000133692, 200_000_000_000, 0.3, 9946, 97530.476),
+    "Verticals": BeamSection(0.0088, 0.000000444356, 0.0000133733, 0.000332293, 200_000_000_000, 0.3, 9946, 97530.476),
+    "DiagonalsU1L2": BeamSection(0.0127569, 0.0000026403, 0.000304142, 0.000660718, 200_000_000_000, 0.3, 9946, 97530.476),
+    "DiagonalsU3L2": BeamSection(0.0092583, 0.0000026403, 0.000128362, 0.00048099, 200_000_000_000, 0.3, 9946, 97530.476),
+    "CrossGirders": BeamSection(0.02535, 0.00000431878, 0.0043298, 0.000213411, 200_000_000_000, 0.3, 9946, 97530.476),
+    "SwayGirders": BeamSection(0.00384487, 0.000000148625, 0.000144009, 0.00000434948, 200_000_000_000, 0.3, 9946, 97530.476),
+    "BottomLateralBracing": BeamSection(0.00383182, 0.000000140658, 0.00000792087, 0.00000792087, 200_000_000_000, 0.3, 9946, 97530.476),
+    "TopLateralBracing": BeamSection(0.00360566, 0.000000213409, 0.0000130409, 0.00000350786, 200_000_000_000, 0.3, 9946, 97530.476),
+    "StringerMain": BeamSection(0.01831, 0.00000210773, 0.00190898, 0.000104873, 200_000_000_000, 0.3, 9946, 97530.476),
+    "StringerCross": BeamSection(0.00637843, 0.000000406964, 0.000152071, 0.00000504857, 200_000_000_000, 0.3, 9946, 97530.476),
+    "StringerLateralBracing": BeamSection(0.001402, 0.00000004666666, 0.000000714, 0.000000714, 200_000_000_000, 0.3, 9946, 97530.476),
+    "KneeBracing": BeamSection(0.0028, 0.0000000933333333, 0.0000014495610119, 0.0000035533333333, 200_000_000_000, 0.3, 9946, 97530.476),
   }
+
+  # Adding load of rail on the stringer main
+  RailLoad = 216
+  g = 9.806
+  sections["StringerMain"].rho += RailLoad/sections["StringerMain"].Area
+  sections["StringerMain"].rhog += RailLoad*g/sections["StringerMain"].Area
 
   truss1 = Truss4Bay([0,0,0], [5.905,0,7.315], [
     sections["BottomChordL0L2"], sections["BottomChordL2L4"], sections["BottomChordL2L4"], sections["BottomChordL0L2"],
@@ -304,7 +311,17 @@ if __name__ == "__main__":
 
   np.set_printoptions(suppress=True) # To suppress exponential notation
   # print(np.hstack([DOFClass.ActionVector.toarray(), DOFClass.ReactionVector.toarray(), DOFClass.DisplacementVector.toarray()]))
+  print("Static Analysis Results")
+  print("Reactions at 4 Nodes (Clockwise from Node L0 of Truss 1)")
   print(truss1.node_by_name("L0").getReaction())
   print(truss1.node_by_name("L8").getReaction())
-  print(truss2.node_by_name("L0").getReaction())
   print(truss2.node_by_name("L8").getReaction())
+  print(truss2.node_by_name("L0").getReaction())
+
+  # DOFClass.analyse()
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
+  T = 2*np.pi/D**0.5
+  print("Eigenvalue Analysis Results")
+  print("Time:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  for _T,_MP in zip(T, MassParticipationFactor*100):
+    print(f"{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
