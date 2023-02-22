@@ -4,27 +4,33 @@ import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
 from . import DOFClass
 from . import utils
+from .types import DOFTypes
 
 @dataclass
 class Node:
   coord: npt.NDArray[np.float64]
   restraint: InitVar[npt.NDArray[np.bool_]] = None
   Kg: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
-  axis: npt.NDArray[np.float64] = field(default_factory=lambda:np.array([[1,0,0], [0,1,0], [0,0,1]]))
+  axis: InitVar[npt.NDArray[np.float64]] = None
 
-  DOF: list[DOFClass] = field(init=False)
+  DOF: list[DOFClass] = field(init=False, default_factory=list)
   disp: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((6,1)))
   force: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((6,1)))
 
-  def __post_init__(self, restraint):
+  def __post_init__(self, restraint, axis):
     restraint = utils.ensure1DNumpyArray(restraint, np.bool_, np.zeros((6,),dtype=np.bool_))
+    axis = utils.ensure2DSquareNumpyArray(axis, np.float64, np.array([[1.,0.,0.], [0.,1.,0.], [0.,0.,1.]]))
     self.coord = utils.ensure1DNumpyArray(self.coord, np.float64)
     self.Kg = utils.ensure2DSquareNumpyArray(self.Kg, np.float64)
-    self.axis = utils.ensure2DSquareNumpyArray(self.axis, np.float64)
-    self.DOF = [DOFClass(res) for res in restraint]
+    self.DOF.extend([DOFClass(DOFTypes.DISPLACEMENT, dir, res) for dir, res in zip(axis, restraint[:3])])
+    self.DOF.extend([DOFClass(DOFTypes.ROTATION, dir, res) for dir, res in zip(axis, restraint[3:])])
 
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
+
+  @property
+  def axis(self) -> npt.NDArray[np.float64]:
+    return np.array([_.dir for _ in self.DOF[:3]], dtype=np.float64)
 
   @property
   def restraint(self) -> npt.NDArray[np.bool_]:

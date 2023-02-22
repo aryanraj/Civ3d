@@ -7,12 +7,16 @@ from typing import ClassVar
 from dataclasses import dataclass, field
 from itertools import count
 import os
+from .types import DOFTypes
+from . import utils
 
 MAX_DOF: int = int(os.getenv("MAX_DOF", 10000))
 
 @dataclass
 class DOFClass():
   id: int = field(init=False, default_factory=count().__next__)
+  represents: DOFTypes
+  dir: npt.NDArray[np.float64]
   isRestrained: bool = False
   constraints: tuple[list[DOFClass],list[float]] | None = field(init=False, default=None)
 
@@ -31,6 +35,7 @@ class DOFClass():
   def __post_init__(self):
     if not type(self.isRestrained) is bool:
       self.isRestrained = bool(self.isRestrained)
+    self.dir = utils.ensure1DNumpyArray(self.dir, np.float64, np.array([1.,0.,0.]))
     cls = type(self)
     cls.RestraintVector[self.id,0] = self.isRestrained
     cls.DOFList.append(self)
