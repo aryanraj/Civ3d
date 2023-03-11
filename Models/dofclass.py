@@ -164,7 +164,7 @@ class DOFClass():
     cls.ImbalancedForceVector[:,0] = 0
 
   @classmethod
-  def eig(cls, nModes):
+  def eig(cls, nModes) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     Kg = cls.ConstraintMatrix.T @ cls.StiffnessMatrix @ cls.ConstraintMatrix
     Mg = cls.ConstraintMatrix.T @ cls.MassMatrix @ cls.ConstraintMatrix
     EigenVectors = sp.lil_matrix((cls.ConstraintMatrix.shape[0], nModes))
@@ -193,4 +193,4 @@ class DOFClass():
       EigenVectors[mask,:] = V
       EigenVectors = cls.ConstraintMatrix @ EigenVectors
 
-    return EigenValues, EigenVectors, EffectiveMass, MassParticipationFactor
+    return EigenValues, EigenVectors.todense(), EffectiveMass, MassParticipationFactor
