@@ -306,9 +306,6 @@ if __name__ == "__main__":
 
   DOFClass.analyse()
 
-  # Display
-  SimpleView().display(nodes, beams)
-
   np.set_printoptions(suppress=True) # To suppress exponential notation
   # print(np.hstack([DOFClass.ActionVector.toarray(), DOFClass.ReactionVector.toarray(), DOFClass.DisplacementVector.toarray()]))
   print("Static Analysis Results")
@@ -325,3 +322,7 @@ if __name__ == "__main__":
   print("Time:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for _T,_MP in zip(T, MassParticipationFactor*100):
     print(f"{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
+
+  # Display
+  view = SimpleView(nodes, beams, V)
+  view.start()
