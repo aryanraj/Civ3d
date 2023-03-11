@@ -12,7 +12,11 @@ def computeLocalYAxis(dirX: npt.NDArray[np.float64], beta: float) -> npt.NDArray
   Using Rodrigues' rotation formula for performing a rotation for beta angle
   For more details goto https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
   """
-  unrotated = np.array([-dirX[1], dirX[0], 0])
+  #TODO: Calculate using epsilon
+  if dirX[0] == 0 and dirX[1] == 0:
+    unrotated = np.array([0, 1, 0])
+  else:
+    unrotated = np.array([-dirX[1], dirX[0], 0])/np.linalg.norm(np.array([-dirX[1], dirX[0], 0]))
   K = computePreCrossProductTransform(dirX)
   R: npt.NDArray[np.float64] = np.identity(3) + np.sin(beta/180.*np.pi)*K + (1 - np.cos(beta/180.*np.pi)) * K @ K
   return unrotated @ R.T
