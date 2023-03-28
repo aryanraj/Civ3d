@@ -99,15 +99,19 @@ class SimpleView():
         + beam.j.DOF[2].dir * self.ModeShapes[beam.j.DOF[2].id][modeNumber]
       beamDiplacementVector.append((iDisplacementVector, jDisplacementVector))
 
-    from time import sleep
-    for phaseDegree in range(0,361,10):
+    import time
+    startTimeSeconds = time.time()
+    minFPS = 25
+    totalDurationSeconds = 4.0
+    while (currentTimeSeconds:=time.time()) - startTimeSeconds < totalDurationSeconds:
+      phaseDegree = 360*(currentTimeSeconds - startTimeSeconds)/totalDurationSeconds
       displacementFactor = np.sin(np.radians(phaseDegree))*1/max(self.ModeShapes[:, modeNumber])*500*4
       for index, displacementVector in enumerate(nodeDiplacementVector):
         self._translateNode(index, displacementVector*displacementFactor)
       for index, (iDisplacementVector, jDisplacementVector) in enumerate(beamDiplacementVector):
         self._displaceBeamByijDisplacement(index, iDisplacementVector*displacementFactor, jDisplacementVector*displacementFactor)
       self.display.Context.UpdateCurrentViewer()
-      sleep(1/20)
+      time.sleep(max(1/minFPS - (time.time() - currentTimeSeconds), 0))
 
   def start(self):
     self.add_menu("Mode")
