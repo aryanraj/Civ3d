@@ -68,6 +68,10 @@ class DOFClass():
 
   def addDisplacement(self, val):
     cls = type(self)
+    if not self.isRestrained:
+      raise Exception(f"DOF {self.id} needs to be restrained before adding displacement")
+    if self.isConstrained:
+      raise Exception(f"Constrained DOF {self.id} can't have displacmeent added to it")
     cls.ImbalancedDisplacementVector[self.id,0] += val
   
   def addAction(self, val):
