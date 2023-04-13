@@ -28,7 +28,7 @@ class DOFClass():
   ReactionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   ActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   DisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
-  ImbalancedForceVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
+  ImbalancedActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   ImbalancedDisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   RestraintVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.bool_)
 
@@ -77,12 +77,12 @@ class DOFClass():
   def addAction(self, val):
     cls = type(self)
     cls.ActionVector[self.id,0] += val
-    cls.ImbalancedForceVector[self.id,0] += val
+    cls.ImbalancedActionVector[self.id,0] += val
 
   def addFixedEndReaction(self, val):
     cls = type(self)
     cls.ActionVector[self.id,0] -= val
-    cls.ImbalancedForceVector[self.id,0] -= val
+    cls.ImbalancedActionVector[self.id,0] -= val
 
   def addConstraint(self, DOFs:list[DOFClass], factors:list[float]):
     if self.isConstrained:
@@ -117,7 +117,7 @@ class DOFClass():
     cls = type(self)
     self.isRestrained = False
     cls.RestraintVector[self.id,0] = self.isRestrained
-    cls.ImbalancedForceVector[self.id,0] -= cls.ReactionVector[self.id,0]
+    cls.ImbalancedActionVector[self.id,0] -= cls.ReactionVector[self.id,0]
     cls.ReactionVector[self.id,0] = 0
 
   @classmethod
@@ -129,43 +129,45 @@ class DOFClass():
     self.MassMatrix[np.ix_([_.id for _ in DOFs],[_.id for _ in DOFs])] += M
 
   @classmethod
-  def analyse(cls):
+  def analyse(cls) -> npt.NDArray[np.float64]:
     Kg = cls.ConstraintMatrix.T @ cls.StiffnessMatrix @ cls.ConstraintMatrix
-    disp = cls.ConstraintMatrix @ cls.ImbalancedDisplacementVector
-    force = cls.ConstraintMatrix.T @ cls.ImbalancedForceVector
+    displacement = cls.ConstraintMatrix @ cls.ImbalancedDisplacementVector
+    constrainedAction = cls.ConstraintMatrix.T @ cls.ImbalancedActionVector
+    reaction = sp.lil_array(constrainedAction.shape, dtype=np.float64)
 
     # Mask for all the DOFs which are not restraints
-    mask = ~cls.RestraintVector.toarray().flatten()
+    freeMask = ~cls.RestraintVector.toarray().flatten()
 
     # Filter out DOFs which have zero stiffness and zero unbalanced force
     # TODO: Fix this part using LU_factor and LU_solve
-    for i, _Kg, _force in zip(range(len(mask)), Kg, force):
+    for i, _Kg, _force in zip(range(len(freeMask)), Kg, constrainedAction):
       if cls.RestraintVector[i,0]: continue
       if np.all(_Kg.toarray() == 0) and np.all(_force.toarray() == 0):
-        mask[i] = False
+        freeMask[i] = False
       if np.all(_Kg.toarray() == 0) and np.any(_force.toarray() != 0):
         raise Exception(f"Instability at DOF {i}")
     
     # Do not proceed if the DOF mask is empty
-    if np.any(mask):
-      K11 = Kg[np.ix_(mask, mask)]
-      K12 = Kg[np.ix_(mask, ~mask)]
-      K21 = Kg[np.ix_(~mask, mask)]
-      K22 = Kg[np.ix_(~mask, ~mask)]
+    if np.any(freeMask):
+      K11 = Kg[np.ix_(freeMask, freeMask)]
+      K12 = Kg[np.ix_(freeMask, ~freeMask)]
+      K21 = Kg[np.ix_(~freeMask, freeMask)]
+      K22 = Kg[np.ix_(~freeMask, ~freeMask)]
 
-      Qk = force[mask]
-      Dk = disp[~mask]
+      Qk = constrainedAction[freeMask]
+      Dk = displacement[~freeMask]
       Du = sp.lil_matrix([splinalg.spsolve(K11, Qk - K12 @ Dk)]).T # Not sure why is sp solve returning list object
       Qu = K21 @ Du + K22 @ Dk
 
-      disp[mask] = Du
-      force[~mask] -= Qu
-      force[mask] = 0
+      displacement[freeMask] = Du
+      reaction[~freeMask] = Qu - constrainedAction[~freeMask]
+      displacement = cls.ConstraintMatrix @ displacement
 
-    cls.DisplacementVector += cls.ConstraintMatrix @ disp
-    cls.ReactionVector -= force
+    cls.DisplacementVector += displacement
+    cls.ReactionVector += reaction
     cls.ImbalancedDisplacementVector[:,0] = 0
-    cls.ImbalancedForceVector[:,0] = 0
+    cls.ImbalancedActionVector[:,0] = 0
+    return displacement.todense()
 
   @classmethod
   def eig(cls, nModes) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
