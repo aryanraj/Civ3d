@@ -73,6 +73,12 @@ class Node:
   def addStiffness(self, K: npt.NDArray[np.float64]):
     DOFClass.addStiffness(self.DOF, K)
 
+  def addMass(self, M: npt.NDArray[np.float64]):
+    DOFClass.addMass(self.DOF, M)
+
+  def addLumpedMass(self, mass: float):
+    self.addMass(np.diag([mass]*3+[0]*3))
+
   def getAction(self) -> npt.NDArray[np.float64]:
     return np.array([_.action for _ in self.DOF])
 

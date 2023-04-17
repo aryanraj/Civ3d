@@ -86,47 +86,9 @@ class FixedBeam:
   @property
   def Ml(self) -> npt.NDArray[np.float64]:
     L = self.L
-    L2 = L*L
-    rAL = self.section.rho * self.section.Area * L
-    rIxxL = self.section.rho * self.section.Ixx * L
-    rAL_420 = rAL/420.
-    # Mass along local X dir
-    Tlk_xd = np.array([
-      [  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
-    ], dtype=np.float64)
-    Mk_xd = rAL*np.array([
-      [1/3, 1/6],
-      [1/6, 1/3],
-    ], dtype=np.float64)
-    Tlk_xr = np.array([
-      [  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0],
-    ], dtype=np.float64)
-    Mk_xr = rIxxL*np.array([
-      [1/3, 1/6],
-      [1/6, 1/3],
-    ], dtype=np.float64)
-    #Mass in local Y/Z dir
-    Tlk_y = np.array([
-      [  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1],
-    ], dtype=np.float64)
-    Tlk_z = np.array([
-      [  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0],
-      [  0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  0],
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,  0],
-    ], dtype=np.float64)
-    Mk_yz = rAL_420*np.array([
-      [  156,   54, 22*L,-13*L],
-      [   54,  156, 13*L,-22*L],
-      [ 22*L, 13*L, 4*L2,-3*L2],
-      [-13*L,-22*L,-3*L2, 4*L2],
-    ], dtype=np.float64)
-    return Tlk_xd.T @ Mk_xd @ Tlk_xd + Tlk_xr.T @ Mk_xr @ Tlk_xr + Tlk_y.T @ Mk_yz @ Tlk_y + Tlk_z.T @ Mk_yz @ Tlk_z
+    rA = self.section.rho * self.section.Area
+    rIxx = self.section.rho * self.section.Ixx
+    return self.getMassMatrixUDL(L, rA, rA, rA, rIxx)
 
   @property
   def Tgl(self) -> npt.NDArray[np.float64]:
@@ -199,3 +161,53 @@ class FixedBeam:
     self.addUDL(0, udl*np.dot(globalDir, self.axis[0]))
     self.addUDL(1, udl*np.dot(globalDir, self.axis[1]))
     self.addUDL(2, udl*np.dot(globalDir, self.axis[2]))
+
+  def addMassUDL(self, massPerLength:float) -> None:
+    massMatrix = self.getMassMatrixUDL(self.L, massPerLength, massPerLength, massPerLength, 0)
+    DOFClass.addMass(self.DOF, massMatrix)
+
+  @staticmethod
+  def getMassMatrixUDL(L:float, rAx:float, rAy:float, rAz:float, rIxx:float=0) -> npt.NDArray[np.float64]:
+    L2 = L*L
+    rAxL = rAx * L
+    rIxxL = rIxx * L
+    rAyL_420 = rAy*L/420.
+    rAzL_420 = rAz*L/420.
+    # Mass along local X dir
+    Tlk_xd = np.array([
+      [  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
+    ], dtype=np.float64)
+    Mk_xd = rAxL*np.array([
+      [1/3, 1/6],
+      [1/6, 1/3],
+    ], dtype=np.float64)
+    Tlk_xr = np.array([
+      [  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0],
+    ], dtype=np.float64)
+    Mk_xr = rIxxL*np.array([
+      [1/3, 1/6],
+      [1/6, 1/3],
+    ], dtype=np.float64)
+    #Mass in local Y/Z dir
+    Tlk_y = np.array([
+      [  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1],
+    ], dtype=np.float64)
+    Tlk_z = np.array([
+      [  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0],
+      [  0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  0],
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,  0],
+    ], dtype=np.float64)
+    Mk_y = rAyL_420*np.array([
+      [  156,   54, 22*L,-13*L],
+      [   54,  156, 13*L,-22*L],
+      [ 22*L, 13*L, 4*L2,-3*L2],
+      [-13*L,-22*L,-3*L2, 4*L2],
+    ], dtype=np.float64)
+    Mk_z = Mk_y/rAyL_420*rAzL_420
+    return Tlk_xd.T @ Mk_xd @ Tlk_xd + Tlk_xr.T @ Mk_xr @ Tlk_xr + Tlk_y.T @ Mk_y @ Tlk_y + Tlk_z.T @ Mk_z @ Tlk_z

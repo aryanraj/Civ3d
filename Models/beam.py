@@ -75,3 +75,8 @@ class Beam:
   def addSelfWeight(self, dir:int) -> None:
     for childBeam in self.childBeams:
       childBeam.addSelfWeight(dir)
+
+  def addMassUDL(self, massPerLength:float) -> None:
+    for childBeam in self.childBeams:
+      childBeam.addMassUDL(massPerLength)
+      
