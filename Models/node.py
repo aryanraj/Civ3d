@@ -14,8 +14,6 @@ class Node:
   axis: InitVar[npt.NDArray[np.float64]] = None
 
   DOF: list[DOFClass] = field(init=False, default_factory=list)
-  disp: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((6,1)))
-  force: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((6,1)))
 
   def __post_init__(self, restraint, axis):
     restraint = utils.ensure1DNumpyArray(restraint, np.bool_, np.zeros((6,),dtype=np.bool_))
