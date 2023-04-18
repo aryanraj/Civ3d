@@ -73,6 +73,10 @@ class Node:
   def addStiffness(self, K: npt.NDArray[np.float64]):
     DOFClass.addStiffness(self.DOF, K)
 
+  def addNodalForce(self, force: npt.NDArray[np.float64]):
+    for _DOF, _force in zip(self.DOF, force):
+      _DOF.addAction(_force)
+
   def addMass(self, M: npt.NDArray[np.float64]):
     DOFClass.addMass(self.DOF, M)
 

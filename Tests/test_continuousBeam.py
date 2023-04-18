@@ -12,10 +12,19 @@ section = BeamSection()
 b1 = Beam([n1, n2, n3], section, A=n0, B=n4, isConstrainedA=[1,1,1,1,1,0], isConstrainedB=[1,1,1,1,1,0])
 b1.addUDL(1, -10)
 DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
 
 b1.addUDL(1, -10)
 b1.addSimpleEndStiffness(endStiffnessA=[0,0,0,0,0,1], endStiffnessB=[0,0,0,0,0,1])
 DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
+
+n2.addNodalForce([0,-10,0,0,0,0])
+DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
 
 print(DOFClass.DisplacementVector)
 print(DOFClass.ActionVector)
