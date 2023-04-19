@@ -24,7 +24,6 @@ class DOFClass():
   DOFList: ClassVar[list[DOFClass]] = []
   StiffnessMatrix: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_DOF), dtype=np.float64)
   MassMatrix: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_DOF), dtype=np.float64)
-  ConstraintMatrix: ClassVar[sp.lil_array] = sp.lil_array(sp.eye(MAX_DOF, dtype=np.float64))
   ReactionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   ActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
   DisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
@@ -89,17 +88,11 @@ class DOFClass():
       raise Exception(f"Already Constrained DOF {self.id}")
     if self.isRestrained:
       raise Exception(f"DOF {self.id} is restrained and cannot be further constrained")
-    m = sp.lil_array(sp.eye(MAX_DOF, dtype=np.float64))
-    m[self.id, self.id] = 0
-    m[self.id, [_.id for _ in DOFs]] = factors
     self.constraints = (DOFs, factors)
-    cls = type(self)
-    cls.ConstraintMatrix = cls.ConstraintMatrix @ m
   
   def removeConstraint(self):
     if not self.isConstrained:
       raise Exception("No Constraint available to remove")
-    raise NotImplementedError("Future feature: remove constraint")
     self.constraints = None
   
   def addRestraint(self):
@@ -121,6 +114,33 @@ class DOFClass():
     cls.ReactionVector[self.id,0] = 0
 
   @classmethod
+  def generateConstraintMatrix(cls) -> sp.lil_array:
+    levels = np.full((len(cls.DOFList),), fill_value=-1, dtype=int)
+    def DFS(parent:DOFClass):
+      maxChildLevel = -1
+      if parent.isConstrained:
+        for child in parent.constraints[0]:
+          if levels[child.id] == -1:
+            DFS(child)
+          maxChildLevel = max(maxChildLevel, levels[child.id])
+      levels[parent.id] = maxChildLevel + 1
+    for id, _level in enumerate(levels):
+      if _level == -1:
+        DFS(cls.DOFList[id])
+    maxLevel = levels.max()
+    
+    constraintMatrix = sp.lil_array(sp.eye(MAX_DOF, dtype=np.float64))
+    for currentLevel in range(1,maxLevel+1):
+      m = sp.lil_array(sp.eye(MAX_DOF, dtype=np.float64))
+      for id, _level in enumerate(levels):
+        if _level == currentLevel:
+          DOFs, factors = cls.DOFList[id].constraints
+          m[id, id] = 0
+          m[id, [_.id for _ in DOFs]] = factors
+      constraintMatrix = m @ constraintMatrix
+    return constraintMatrix
+
+  @classmethod
   def addStiffness(self, DOFs:list[DOFClass], K:npt.NDArray[np.float64]):
     self.StiffnessMatrix[np.ix_([_.id for _ in DOFs],[_.id for _ in DOFs])] += K
 
@@ -130,9 +150,10 @@ class DOFClass():
 
   @classmethod
   def analyse(cls) -> npt.NDArray[np.float64]:
-    Kg = cls.ConstraintMatrix.T @ cls.StiffnessMatrix @ cls.ConstraintMatrix
-    displacement = cls.ConstraintMatrix @ cls.ImbalancedDisplacementVector
-    constrainedAction = cls.ConstraintMatrix.T @ cls.ImbalancedActionVector
+    ConstraintMatrix = cls.generateConstraintMatrix()
+    Kg = ConstraintMatrix.T @ cls.StiffnessMatrix @ ConstraintMatrix
+    displacement = ConstraintMatrix @ cls.ImbalancedDisplacementVector
+    constrainedAction = ConstraintMatrix.T @ cls.ImbalancedActionVector
     reaction = sp.lil_array(constrainedAction.shape, dtype=np.float64)
 
     # Mask for all the DOFs which are not restraints
@@ -160,7 +181,7 @@ class DOFClass():
 
       displacement[freeMask] = Du
       reaction[~freeMask] = Qu - constrainedAction[~freeMask]
-      displacement = cls.ConstraintMatrix @ displacement
+      displacement = ConstraintMatrix @ displacement
     else:
       K22 = Kg[np.ix_(~freeMask, ~freeMask)]
       Dk = displacement[~freeMask]
@@ -175,9 +196,10 @@ class DOFClass():
 
   @classmethod
   def eig(cls, nModes) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-    Kg = cls.ConstraintMatrix.T @ cls.StiffnessMatrix @ cls.ConstraintMatrix
-    Mg = cls.ConstraintMatrix.T @ cls.MassMatrix @ cls.ConstraintMatrix
-    EigenVectors = sp.lil_matrix((cls.ConstraintMatrix.shape[0], nModes))
+    ConstraintMatrix = cls.generateConstraintMatrix()
+    Kg = ConstraintMatrix.T @ cls.StiffnessMatrix @ ConstraintMatrix
+    Mg = ConstraintMatrix.T @ cls.MassMatrix @ ConstraintMatrix
+    EigenVectors = sp.lil_matrix((ConstraintMatrix.shape[0], nModes))
 
     # Mask for all the DOFs which are not restraints
     mask = ~cls.RestraintVector.toarray().flatten()
@@ -201,6 +223,6 @@ class DOFClass():
       TotalMass = np.diag(DispDirMatrix.T @ M11 @ DispDirMatrix)
       MassParticipationFactor = EffectiveMass/TotalMass
       EigenVectors[mask,:] = V
-      EigenVectors = cls.ConstraintMatrix @ EigenVectors
+      EigenVectors = ConstraintMatrix @ EigenVectors
 
     return EigenValues, EigenVectors.todense(), EffectiveMass, MassParticipationFactor
