@@ -147,7 +147,6 @@ class DOFClass():
       if np.all(_Kg.toarray() == 0) and np.any(_force.toarray() != 0):
         raise Exception(f"Instability at DOF {i}")
     
-    # Do not proceed if the DOF mask is empty
     if np.any(freeMask):
       K11 = Kg[np.ix_(freeMask, freeMask)]
       K12 = Kg[np.ix_(freeMask, ~freeMask)]
@@ -162,6 +161,11 @@ class DOFClass():
       displacement[freeMask] = Du
       reaction[~freeMask] = Qu - constrainedAction[~freeMask]
       displacement = cls.ConstraintMatrix @ displacement
+    else:
+      K22 = Kg[np.ix_(~freeMask, ~freeMask)]
+      Dk = displacement[~freeMask]
+      Qu = K22 @ Dk
+      reaction[~freeMask] = Qu - constrainedAction[~freeMask]
 
     cls.DisplacementVector += displacement
     cls.ReactionVector += reaction
