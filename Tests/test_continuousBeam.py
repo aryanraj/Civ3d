@@ -9,14 +9,14 @@ n3 = Node([9,0,0])
 n4 = Node([10,0,0], [1, 1, 1, 1, 1, 1])
 
 section = BeamSection()
-b1 = Beam([n1, n2, n3], section, A=n0, B=n4, isConstrainedA=[1,1,1,1,1,0], isConstrainedB=[1,1,1,1,1,0])
+b1 = Beam([n1, n2, n3], section, A=n0, B=n4, constraintsA=[1,1,1,1,1,0], constraintsB=[1,1,1,1,1,0])
 b1.addUDL(1, -10)
 DOFClass.analyse()
 midSpanMaxDisplacement = n2.getDisplacement()[1]
 print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
 
 b1.addUDL(1, -10)
-b1.addSimpleEndStiffness(endStiffnessA=[0,0,0,0,0,1], endStiffnessB=[0,0,0,0,0,1])
+b1.addEndStiffness(endStiffnessA=[0,0,0,0,0,1], endStiffnessB=[0,0,0,0,0,1])
 DOFClass.analyse()
 midSpanMaxDisplacement = n2.getDisplacement()[1]
 print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")

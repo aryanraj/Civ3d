@@ -18,7 +18,7 @@ n4 = Node([10,0,0], [1, 1, 1, 1, 1, 1])
 acceptableError = 0.001
 
 section = BeamSection()
-b1 = Beam([n1, n21, n22, n23, n24, n25, n26, n27, n3], section, A=n0, B=n4, isConstrainedA=[1,1,1,1,1,1], isConstrainedB=[1,1,1,1,1,1])
+b1 = Beam([n1, n21, n22, n23, n24, n25, n26, n27, n3], section, A=n0, B=n4, constraintsA=[1,1,1,1,1,1], constraintsB=[1,1,1,1,1,1])
 D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(1)
 T0 = 2*np.pi/D[0]**0.5
 # print(f"Fundamental Time period {T0:.2f=} secs for beam only section")
