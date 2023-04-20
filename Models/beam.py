@@ -48,8 +48,9 @@ class Beam:
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
 
-  def addConstrains(self, constraints:npt.NDArray[np.bool_]):
-    raise NotImplementedError("Future feature")
+  def addEndConstrains(self, constraintsA:npt.NDArray[np.bool_], constraintsB:npt.NDArray[np.bool_]):
+    self.A.constrainChildNode(self.nodes[0], constraintsA)
+    self.B.constrainChildNode(self.nodes[-1], constraintsB)
 
   def addSimpleEndStiffness(self, endStiffnessA:npt.NDArray[np.float64]=None, endStiffnessB:npt.NDArray[np.float64]=None):
     if endStiffnessA is None:
