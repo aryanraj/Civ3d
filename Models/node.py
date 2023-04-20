@@ -34,6 +34,10 @@ class Node:
   def restraint(self) -> npt.NDArray[np.bool_]:
     return np.array([_DOF.isRestrained for _DOF in self.DOF], dtype=np.bool_)
 
+  @property
+  def constraint(self) -> npt.NDArray[np.bool_]:
+    return np.array([_DOF.isConstrained for _DOF in self.DOF], dtype=np.bool_)
+
   def addRestraint(self, res: npt.NDArray[np.bool_]) -> None:
     res = np.array(res, dtype=np.bool_)
     for _DOF, _res in zip(self.DOF, res):
