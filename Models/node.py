@@ -57,8 +57,10 @@ class Node:
   def constrainChildNode(self, childNode: Node, constraints: npt.NDArray[np.bool_]):
     constraintMatrix = self.getConstraintMatrixFor(childNode)
     for _constraint, _Tgl, _localDOF in zip(constraints, constraintMatrix, childNode.DOF):
-      if not _constraint: continue
-      _localDOF.addConstraint(self.DOF,_Tgl)
+      if _constraint and not _localDOF.isConstrained:
+        _localDOF.addConstraint(self.DOF,_Tgl)
+      if not _constraint and _localDOF.isConstrained:
+        _localDOF.removeConstraint()
 
   def addChildNodeStiffness(self, childNode: Node, K6: npt.NDArray[np.float64]):
     if K6.ndim != 2 or K6.shape != (6,6):
