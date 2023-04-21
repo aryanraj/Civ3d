@@ -55,6 +55,13 @@ class SimpleView():
       self.display.Context.Display(ais, True)
     self.display.FitAll()
 
+  def displayDeformed(self, nodeDisplacementVector, beamDisplacementVector, displacementFactor=1):
+    for index, displacementVector in enumerate(nodeDisplacementVector):
+      self._translateNode(index, displacementVector*displacementFactor)
+    for index, (iDisplacementVector, jDisplacementVector) in enumerate(beamDisplacementVector):
+      self._displaceBeamByijDisplacement(index, iDisplacementVector*displacementFactor, jDisplacementVector*displacementFactor)
+    self.display.Context.UpdateCurrentViewer()
+  
   def _translateNode(self, index:int, displacementVector:npt.NDArray[np.float64]) -> None:
     node_ais = self.nodes_ais[index]
     nodeTrsf = gp_Trsf()
@@ -71,25 +78,26 @@ class SimpleView():
     beamTranslateTrsf.SetTranslation(gp_Vec(*(iDisplacementVector + jDisplacementVector)/2))
     # Beam Rotation
     relDisplacement = jDisplacementVector - iDisplacementVector
-    rotationPoint = (beam.i.coord + beam.j.coord)/2*1000
-    rotationAxisRaw = np.cross(beam.axis[0], relDisplacement)
-    rotationAxis = rotationAxisRaw/np.linalg.norm(rotationAxisRaw)
-    perpendicularDisplacementAxis = np.cross(rotationAxis, beam.axis[0])
-    rotationAngle = np.dot(relDisplacement, perpendicularDisplacementAxis)/(beam.L*1000)
-    beamRotateTrsf.SetRotation(gp_Ax1(gp_Pnt(*rotationPoint), gp_Dir(*rotationAxis)), rotationAngle)
+    if np.linalg.norm(relDisplacement) != 0:
+      rotationPoint = (beam.i.coord + beam.j.coord)/2*1000
+      rotationAxisRaw = np.cross(beam.axis[0], relDisplacement)
+      rotationAxis = rotationAxisRaw/np.linalg.norm(rotationAxisRaw)
+      perpendicularDisplacementAxis = np.cross(rotationAxis, beam.axis[0])
+      rotationAngle = np.dot(relDisplacement, perpendicularDisplacementAxis)/(beam.L*1000)
+      beamRotateTrsf.SetRotation(gp_Ax1(gp_Pnt(*rotationPoint), gp_Dir(*rotationAxis)), rotationAngle)
 
     toploc = TopLoc_Location(beamTranslateTrsf*beamRotateTrsf)
     self.display.Context.SetLocation(beam_ais, toploc)
   
   def displayModeShape(self, modeNumber:int = 0) -> None:
-    nodeDiplacementVector: list[npt.NDArray[np.float64]] = []
+    nodeDisplacementVector: list[npt.NDArray[np.float64]] = []
     for node in self.nodes:
       displacementVector = node.DOF[0].dir * self.ModeShapes[node.DOF[0].id][modeNumber] \
         + node.DOF[1].dir * self.ModeShapes[node.DOF[1].id][modeNumber] \
         + node.DOF[2].dir * self.ModeShapes[node.DOF[2].id][modeNumber]
-      nodeDiplacementVector.append(displacementVector)
+      nodeDisplacementVector.append(displacementVector)
 
-    beamDiplacementVector: list[tuple(npt.NDArray[np.float64],npt.NDArray[np.float64])] = []
+    beamDisplacementVector: list[tuple(npt.NDArray[np.float64],npt.NDArray[np.float64])] = []
     for beam in self.beams:
       iDisplacementVector = beam.i.DOF[0].dir * self.ModeShapes[beam.i.DOF[0].id][modeNumber] \
         + beam.i.DOF[1].dir * self.ModeShapes[beam.i.DOF[1].id][modeNumber] \
@@ -97,7 +105,7 @@ class SimpleView():
       jDisplacementVector = beam.j.DOF[0].dir * self.ModeShapes[beam.j.DOF[0].id][modeNumber] \
         + beam.j.DOF[1].dir * self.ModeShapes[beam.j.DOF[1].id][modeNumber] \
         + beam.j.DOF[2].dir * self.ModeShapes[beam.j.DOF[2].id][modeNumber]
-      beamDiplacementVector.append((iDisplacementVector, jDisplacementVector))
+      beamDisplacementVector.append((iDisplacementVector, jDisplacementVector))
 
     import time
     startTimeSeconds = time.time()
@@ -106,12 +114,9 @@ class SimpleView():
     while (currentTimeSeconds:=time.time()) - startTimeSeconds < totalDurationSeconds:
       phaseDegree = 360*(currentTimeSeconds - startTimeSeconds)/totalDurationSeconds
       displacementFactor = np.sin(np.radians(phaseDegree))*1/max(self.ModeShapes[:, modeNumber])*500*4
-      for index, displacementVector in enumerate(nodeDiplacementVector):
-        self._translateNode(index, displacementVector*displacementFactor)
-      for index, (iDisplacementVector, jDisplacementVector) in enumerate(beamDiplacementVector):
-        self._displaceBeamByijDisplacement(index, iDisplacementVector*displacementFactor, jDisplacementVector*displacementFactor)
-      self.display.Context.UpdateCurrentViewer()
+      self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, displacementFactor)
       time.sleep(max(1/minFPS - (time.time() - currentTimeSeconds), 0))
+    self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, 0)
 
   def start(self):
     self.add_menu("Mode")
