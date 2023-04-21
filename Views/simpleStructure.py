@@ -25,7 +25,10 @@ class SimpleView():
         self.beams.append(beamORfixedbeam)
 
     for node in self.nodes:
-      sphere = BRepPrimAPI_MakeSphere(gp_Pnt(*node.coord*1000), 100)
+      dirMain = gp_Dir(*node.axis[0])
+      dirCrossSectionX = gp_Dir(*node.axis[1])
+      ax = gp_Ax2(gp_Pnt(*node.coord*1000), dirMain, dirCrossSectionX)
+      sphere = BRepPrimAPI_MakeSphere(ax, 150, 0, np.pi/2, np.pi/2)
       sphere.Build()
       sphere_shape = sphere.Shape()
       ais_sphere = AIS_Shape(sphere_shape)
@@ -34,8 +37,9 @@ class SimpleView():
       self.nodes_ais.append(ais_sphere)
 
     for beam in self.beams:
-      dir = gp_Dir(gp_Vec(gp_Pnt(*beam.i.coord*1000), gp_Pnt(*beam.j.coord*1000)))
-      ax = gp_Ax2(gp_Pnt(*beam.i.coord*1000), dir)
+      dirMain = gp_Dir(*beam.axis[0])
+      dirCrossSectionX = gp_Dir(*beam.axis[1])
+      ax = gp_Ax2(gp_Pnt(*beam.i.coord*1000), dirMain, dirCrossSectionX)
       cylinder = BRepPrimAPI_MakeCylinder(ax, 50, beam.L*1000)
       cylinder.Build()
       cylinder_shape = cylinder.Shape()
@@ -55,18 +59,22 @@ class SimpleView():
       self.display.Context.Display(ais, True)
     self.display.FitAll()
 
-  def displayDeformed(self, nodeDisplacementVector, beamDisplacementVector, displacementFactor=1):
-    for index, displacementVector in enumerate(nodeDisplacementVector):
-      self._translateNode(index, displacementVector*displacementFactor)
+  def displayDeformed(self, nodeDisplacementVector:tuple[npt.NDArray, npt.NDArray], beamDisplacementVector:tuple[npt.NDArray, npt.NDArray], factor:float=1):
+    for index, (displacementVector, rotationVector) in enumerate(nodeDisplacementVector):
+      self._translateNode(index, displacementVector*factor, rotationVector*factor)
     for index, (iDisplacementVector, jDisplacementVector) in enumerate(beamDisplacementVector):
-      self._displaceBeamByijDisplacement(index, iDisplacementVector*displacementFactor, jDisplacementVector*displacementFactor)
+      self._displaceBeamByijDisplacement(index, iDisplacementVector*factor, jDisplacementVector*factor)
     self.display.Context.UpdateCurrentViewer()
   
-  def _translateNode(self, index:int, displacementVector:npt.NDArray[np.float64]) -> None:
+  def _translateNode(self, index:int, displacementVector:npt.NDArray[np.float64], rotatationVector:npt.NDArray[np.float64]) -> None:
+    node = self.nodes[index]
     node_ais = self.nodes_ais[index]
-    nodeTrsf = gp_Trsf()
-    nodeTrsf.SetTranslation(gp_Vec(*displacementVector))
-    nodeToploc = TopLoc_Location(nodeTrsf)
+    nodeTranslateTrsf = gp_Trsf()
+    nodeTranslateTrsf.SetTranslation(gp_Vec(*displacementVector))
+    nodeRotateTrsf = gp_Trsf()
+    if np.linalg.norm(rotatationVector) != 0:
+      nodeRotateTrsf.SetRotation(gp_Ax1(gp_Pnt(*node.coord*1000), gp_Dir(*rotatationVector)), np.linalg.norm(rotatationVector)/1000)
+    nodeToploc = TopLoc_Location(nodeTranslateTrsf*nodeRotateTrsf)
     self.display.Context.SetLocation(node_ais, nodeToploc)
 
   def _displaceBeamByijDisplacement(self, index:int, iDisplacementVector:npt.NDArray[np.float64], jDisplacementVector:npt.NDArray[np.float64]):
@@ -95,7 +103,10 @@ class SimpleView():
       displacementVector = node.DOF[0].dir * self.ModeShapes[node.DOF[0].id][modeNumber] \
         + node.DOF[1].dir * self.ModeShapes[node.DOF[1].id][modeNumber] \
         + node.DOF[2].dir * self.ModeShapes[node.DOF[2].id][modeNumber]
-      nodeDisplacementVector.append(displacementVector)
+      rotationVector = node.DOF[3].dir * self.ModeShapes[node.DOF[3].id][modeNumber] \
+        + node.DOF[4].dir * self.ModeShapes[node.DOF[4].id][modeNumber] \
+        + node.DOF[5].dir * self.ModeShapes[node.DOF[5].id][modeNumber]
+      nodeDisplacementVector.append((displacementVector, rotationVector))
 
     beamDisplacementVector: list[tuple(npt.NDArray[np.float64],npt.NDArray[np.float64])] = []
     for beam in self.beams:
