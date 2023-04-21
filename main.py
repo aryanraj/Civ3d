@@ -105,29 +105,32 @@ class StringerAssembly:
       n3 = Node(nodeB.coord + verticalOffset*axis[2])
       n1 = Node((n0.coord + n3.coord)/2 - crossBeamSpacing/2*axis[0])
       n2 = Node((n0.coord + n3.coord)/2 + crossBeamSpacing/2*axis[0])
-      self.main.append(Beam([n0, n1, n2, n3], sections[0], A=nodeA, B=nodeB))
+      self.main.append(Beam([n0, n1, n2, n3], sections[0], A=nodeA, B=nodeB, constraintsA=[1,1,1,1,0,1], constraintsB=[1,1,1,1,0,1]))
       self.nodes.extend(self.main[-1].nodes)
       self.beams.append(self.main[-1])
 
     self.cross:list[Beam] = []
-    self.cross.append(Beam([self.main[0].nodes[1], self.main[1].nodes[1]], sections[1]))
-    self.cross.append(Beam([self.main[0].nodes[2], self.main[1].nodes[2]], sections[1]))
+    self.cross.append(Beam([self.main[0].nodes[1], self.main[1].nodes[1]], sections[1], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.cross.append(Beam([self.main[0].nodes[2], self.main[1].nodes[2]], sections[1], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
     self.beams.extend(self.cross)
 
     self.lateral:list[Beam] = []
-    self.lateral.append(Beam([Node(self.main[0].nodes[0].coord), self.main[1].nodes[1]], sections[2], A=self.main[0].A))
-    self.lateral.append(Beam([self.main[1].nodes[1], self.main[0].nodes[2]], sections[2]))
-    self.lateral.append(Beam([self.main[0].nodes[2], Node(self.main[1].nodes[-1].coord)], sections[2], B=self.main[1].B))
+    self.lateral.append(Beam([Node(self.main[0].nodes[0].coord), self.main[1].nodes[1]], sections[2], A=self.main[0].A, constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.lateral.append(Beam([self.main[1].nodes[1], self.main[0].nodes[2]], sections[2], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.lateral.append(Beam([self.main[0].nodes[2], Node(self.main[1].nodes[-1].coord)], sections[2], B=self.main[1].B, constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
     self.beams.extend(self.lateral)
 
-def createTrussCrossMembers(nodeA:Node, nodeB:Node, section:BeamSection, addlNodeDist:float, nodeOffset:float=0.25, beta:float=0.) -> Beam:
+def createTrussCrossMembers(nodeA:Node, nodeB:Node, section:BeamSection, addlNodeDist:float, nodeOffset:float=0.25, beta:float=0., verticalOffset:float=0., endsPinned=False) -> Beam:
   # TODO: Relate this with the section width
   axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, beta)
-  n0 = Node(nodeA.coord + axis[0]*nodeOffset)
-  n1 = Node(nodeA.coord + (addlNodeDist+nodeOffset)*axis[0])
-  n2 = Node(nodeB.coord - (addlNodeDist+nodeOffset)*axis[0])
-  n3 = Node(nodeB.coord - axis[0]*nodeOffset)
-  return Beam([n0, n1, n2, n3], section, beta, A=nodeA, B=nodeB)
+  n0 = Node(nodeA.coord + axis[0]*nodeOffset + axis[2]*verticalOffset)
+  n1 = Node(nodeA.coord + (addlNodeDist+nodeOffset)*axis[0] + axis[2]*verticalOffset)
+  n2 = Node(nodeB.coord - (addlNodeDist+nodeOffset)*axis[0] + axis[2]*verticalOffset)
+  n3 = Node(nodeB.coord - axis[0]*nodeOffset + axis[2]*verticalOffset)
+  b = Beam([n0, n1, n2, n3], section, beta, A=nodeA, B=nodeB)
+  if endsPinned:
+    b.addEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
+  return b
 
 def createKneeBracings(truss1Beam:Beam, truss2Beam:Beam, crossMember:Beam, section:BeamSection, Aoffset:float, Boffset:float) -> list[Beam]:
   # TODO: Relate this with the section width
@@ -141,6 +144,7 @@ def createKneeBracings(truss1Beam:Beam, truss2Beam:Beam, crossMember:Beam, secti
   n0 = Node(n0coord, axis=baxis)
   n1 = Node(n1coord, axis=baxis)
   b1 = Beam([n0, n1], section, A=nodeA, B=nodeB)
+  b1.addEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
   # First KneeBracing 
   nodeA = truss2Beam.nodes[-2]
   nodeB = crossMember.nodes[-2]
@@ -150,6 +154,7 @@ def createKneeBracings(truss1Beam:Beam, truss2Beam:Beam, crossMember:Beam, secti
   n0 = Node(n0coord, axis=baxis)
   n1 = Node(n1coord, axis=baxis)
   b2 = Beam([n0, n1], section, A=nodeA, B=nodeB)
+  b2.addEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
   return [b1, b2]
 
 def createLaterals(nodeA1:Node, nodeA2:Node, nodeB1:Node, nodeB2:Node, section:BeamSection, yoffset:float) -> list[Beam]:
@@ -163,10 +168,12 @@ def createLaterals(nodeA1:Node, nodeA2:Node, nodeB1:Node, nodeB2:Node, section:B
   n0 = Node(nodeA1.coord + axisA1B2[0]*xoffset)
   n1 = Node(nodeB2.coord - axisA1B2[0]*xoffset)
   b1 = Beam([n0,ncenter,n1], section, A=nodeA1, B=nodeB2)
+  b1.addEndConstrains([1,1,1,1,0,0], [1,1,1,1,0,0])
   # Second beam
   n0 = Node(nodeA2.coord + axisA2B1[0]*xoffset)
   n1 = Node(nodeB1.coord - axisA2B1[0]*xoffset)
   b2 = Beam([n0,ncenter,n1], section, A=nodeA2, B=nodeB1)
+  b2.addEndConstrains([1,1,1,1,0,0], [1,1,1,1,0,0])
   return [b1,b2]
 
 if __name__ == "__main__":
@@ -227,13 +234,13 @@ if __name__ == "__main__":
   cross_girders:list[Beam] = []
   for i in range(4*2+1):
     nodeA, nodeB = truss1.node_by_name(f"L{i}"), truss2.node_by_name(f"L{i}")
-    cross_girders.append(createTrussCrossMembers(nodeA, nodeB, sections["CrossGirders"], (5.28-1.9)/2-0.25))
+    cross_girders.append(createTrussCrossMembers(nodeA, nodeB, sections["CrossGirders"], (5.28-1.9)/2-0.25, verticalOffset=0.2875))
     nodes.extend(cross_girders[-1].nodes)
     beams.append(cross_girders[-1])
 
   stringers:list[StringerAssembly] = []
   for i in range(4*2):
-    stringers.append(StringerAssembly(cross_girders[i], cross_girders[i+1], 2.05, 0.2875, [
+    stringers.append(StringerAssembly(cross_girders[i], cross_girders[i+1], 2.05, 0, [
       sections["StringerMain"],
       sections["StringerCross"],
       sections["StringerLateralBracing"],
@@ -244,13 +251,13 @@ if __name__ == "__main__":
   portal_girders:list[Beam] = []
   for i,_beta in zip([1,7], np.arctan([5.905/7.315,-5.905/7.315])*180/np.pi):
     nodeA, nodeB = truss1.node_by_name(f"U{i}"), truss2.node_by_name(f"U{i}")
-    portal_girders.append(createTrussCrossMembers(nodeA, nodeB, sections["PortalGirderU1"], (5.28-1.9)/2-0.25, 0.25, _beta))
+    portal_girders.append(createTrussCrossMembers(nodeA, nodeB, sections["PortalGirderU1"], 1.25, 0.25, _beta))
     nodes.extend(portal_girders[-1].nodes)
     beams.append(portal_girders[-1])
 
   portal_bracings:list[Beam] = []
   portal_bracings.extend(createKneeBracings(truss1.diagonalBeams[0], truss2.diagonalBeams[0], portal_girders[0], sections["KneeBracing"], 0.25, 0.225))
-  portal_bracings.extend(createKneeBracings(truss1.diagonalBeams[-1], truss2.diagonalBeams[-1], portal_girders[-1], sections["KneeBracing"], 0.25, 0.45))
+  portal_bracings.extend(createKneeBracings(truss1.diagonalBeams[-1], truss2.diagonalBeams[-1], portal_girders[-1], sections["KneeBracing"], 0.25, 0.225))
   beams.extend(portal_bracings)
   for _ in portal_bracings:
     nodes.extend(_.nodes)
@@ -258,7 +265,7 @@ if __name__ == "__main__":
   sway_girders:list[Beam] = []
   for i in range(2,7):
     nodeA, nodeB = truss1.node_by_name(f"U{i}"), truss2.node_by_name(f"U{i}")
-    sway_girders.append(createTrussCrossMembers(nodeA, nodeB, sections["SwayGirders"], (5.28-1.9)/2-0.25, 0.25))
+    sway_girders.append(createTrussCrossMembers(nodeA, nodeB, sections["SwayGirders"], 1.25, 0.25, endsPinned=True))
     nodes.extend(sway_girders[-1].nodes)
     beams.append(sway_girders[-1])
   
@@ -291,16 +298,6 @@ if __name__ == "__main__":
   for _ in top_laterals:
     nodes.extend(_.nodes)
 
-  # Add Load on Bottom Chord
-  truss1.bottomChordBeam[0].addUDL(2,-10)
-  truss1.bottomChordBeam[1].addUDL(2,-10)
-  truss1.bottomChordBeam[2].addUDL(2,-10)
-  truss1.bottomChordBeam[3].addUDL(2,-10)
-  truss2.bottomChordBeam[0].addUDL(2,-10)
-  truss2.bottomChordBeam[1].addUDL(2,-10)
-  truss2.bottomChordBeam[2].addUDL(2,-10)
-  truss2.bottomChordBeam[3].addUDL(2,-10)
-
   for _ in beams:
     _.addSelfWeight(2)
 
@@ -315,13 +312,12 @@ if __name__ == "__main__":
   print(truss2.node_by_name("L8").getReaction())
   print(truss2.node_by_name("L0").getReaction())
 
-  # DOFClass.analyse()
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
   print("Eigenvalue Analysis Results")
-  print("Time:\tDX\tDY\tDZ\tRX\tRY\tRz")
-  for _T,_MP in zip(T, MassParticipationFactor*100):
-    print(f"{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
+  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
+    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
 
   # Display
   view = SimpleView(nodes, beams, V)
