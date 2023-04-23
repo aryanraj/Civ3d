@@ -36,7 +36,7 @@ class Beam:
         self.A.Kg,
         utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.B.coord, beta=beta)
       )
-    self.addEndConstrains(constraintsA, constraintsB)
+    self.setEndConstrains(constraintsA, constraintsB)
     self.addEndStiffness(self.endStiffnessA, self.endStiffnessB)
     for nodei, nodej in zip(self.nodes[:-1], self.nodes[1:]):
       self.childBeams.append(FixedBeam(nodei, nodej, section, beta))
@@ -44,7 +44,7 @@ class Beam:
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
 
-  def addEndConstrains(self, constraintsA:npt.NDArray[np.float64]=None, constraintsB:npt.NDArray[np.float64]=None):
+  def setEndConstrains(self, constraintsA:npt.NDArray[np.bool_]=None, constraintsB:npt.NDArray[np.bool_]=None):
     if not constraintsA is None:
       self.A.constrainChildNode(self.nodes[0], constraintsA)
     if not constraintsB is None:

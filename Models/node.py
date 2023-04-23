@@ -58,13 +58,13 @@ class Node:
     # Transformation matrix in Child Basis
     return BasisChangeMartix @ TransformationMartix
 
-  def constrainChildNode(self, childNode: Node, constraints: npt.NDArray[np.float64]):
+  def constrainChildNode(self, childNode: Node, constraints: npt.NDArray[np.bool_]):
     constraintMatrix = self.getConstraintMatrixFor(childNode)
     for _constraint, _Tgl, _localDOF in zip(constraints, constraintMatrix, childNode.DOF):
       if _localDOF.isConstrained:
         _localDOF.removeConstraint()
-      if _constraint != 0:
-        _localDOF.addConstraint(self.DOF, _Tgl*_constraint)
+      if _constraint:
+        _localDOF.addConstraint(self.DOF, _Tgl)
 
   def addChildNodeStiffness(self, childNode: Node, K6: npt.NDArray[np.float64]):
     if K6.ndim != 2 or K6.shape != (6,6):
