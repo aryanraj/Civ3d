@@ -23,18 +23,14 @@ class Beam:
     if self.A is None:
       self.A = self.nodes[0]
       self.nodes[0] = Node(
-        self.A.coord,
-        np.zeros((6,), dtype=np.bool_),
-        self.A.Kg,
-        utils.getAxisFromTwoNodesAndBeta(self.A.coord, self.nodes[1].coord, beta=beta)
+        coord=self.A.coord,
+        axis=utils.getAxisFromTwoNodesAndBeta(self.A.coord, self.nodes[1].coord, beta=beta)
       )
     if self.B is None:
       self.B = self.nodes[-1]
       self.nodes[-1] = Node(
-        self.B.coord,
-        np.zeros((6,), dtype=np.bool_),
-        self.A.Kg,
-        utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.B.coord, beta=beta)
+        coord=self.B.coord,
+        axis=utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.B.coord, beta=beta)
       )
     self.setEndConstrains(constraintsA, constraintsB)
     self.addEndStiffness(self.endStiffnessA, self.endStiffnessB)
