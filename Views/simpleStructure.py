@@ -132,10 +132,11 @@ class SimpleView():
   def start(self):
     self.add_menu("Mode")
     self.add_function_to_menu("Mode", self.displayUndeformed)
-    for i in range(self.ModeShapes.shape[1]):
-      _callback = (lambda _:lambda:self.displayModeShape(_))(i)
-      _callback.__name__ = f"Mode {i+1}"
-      self.add_function_to_menu("Mode", _callback)
+    if not self.ModeShapes is None:
+      for i in range(self.ModeShapes.shape[1]):
+        _callback = (lambda _:lambda:self.displayModeShape(_))(i)
+        _callback.__name__ = f"Mode {i+1}"
+        self.add_function_to_menu("Mode", _callback)
     self.displayUndeformed()
     self.start_display()
 
