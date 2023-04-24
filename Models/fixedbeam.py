@@ -13,6 +13,7 @@ class FixedBeam:
   
   UDL: list[tuple[float]] = field(init=False, default_factory=list)
   PointLoad: list[tuple[float]] = field(init=False, default_factory=list)
+  AdditionalMassUDL: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((3,)))
   L: float = field(init=False)
   axis: npt.NDArray[np.float64] = field(init=False)
 
@@ -150,8 +151,8 @@ class FixedBeam:
       forcel[10] -= val*b*a**2/self.L**2
     self.addLocalFEForce(forcel)
 
-  def addSelfWeight(self, dir:int, factor:float=-1) -> None:
-    udl = self.section.Area * self.section.rhog * factor
+  def addSelfWeight(self, dir:int=2, factor:float=-1) -> None:
+    udl = (self.section.Area * self.section.rhog + self.AdditionalMassUDL[dir] * 9.806) * factor
     if dir == 0:
       globalDir = np.array([1,0,0])
     elif dir == 1:
@@ -163,6 +164,9 @@ class FixedBeam:
     self.addUDL(2, udl*np.dot(globalDir, self.axis[2]))
 
   def addMassUDL(self, massPerLength:float) -> None:
+    self.AdditionalMassUDL[0] += massPerLength
+    self.AdditionalMassUDL[1] += massPerLength
+    self.AdditionalMassUDL[2] += massPerLength
     massMatrix = self.getMassMatrixUDL(self.L, massPerLength, massPerLength, massPerLength, 0)
     DOFClass.addMass(self.DOF, massMatrix)
 

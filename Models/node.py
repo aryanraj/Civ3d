@@ -11,6 +11,7 @@ class Node:
   coord: npt.NDArray[np.float64]
   restraint: InitVar[npt.NDArray[np.bool_]] = None
   Kg: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
+  Mg: npt.NDArray[np.float64]  = field(default_factory=lambda:np.zeros((6,6)))
   axis: InitVar[npt.NDArray[np.float64]] = None
 
   DOF: list[DOFClass] = field(init=False, default_factory=list)
@@ -75,17 +76,22 @@ class Node:
     DOFClass.addStiffness(self.DOF+childNode.DOF, C12.T @ K12 @ C12)
 
   def addStiffness(self, K: npt.NDArray[np.float64]):
+    self.Kg += K
     DOFClass.addStiffness(self.DOF, K)
+
+  def addMass(self, M: npt.NDArray[np.float64]):
+    self.Mg += M
+    DOFClass.addMass(self.DOF, M)
+
+  def addLumpedMass(self, mass: float):
+    self.addMass(np.diag([mass]*3+[0]*3))
 
   def addNodalForce(self, force: npt.NDArray[np.float64]):
     for _DOF, _force in zip(self.DOF, force):
       _DOF.addAction(_force)
 
-  def addMass(self, M: npt.NDArray[np.float64]):
-    DOFClass.addMass(self.DOF, M)
-
-  def addLumpedMass(self, mass: float):
-    self.addMass(np.diag([mass]*3+[0]*3))
+  def addSelfWeight(self, dir:int=2, factor:float=-1):
+    self.addNodalForce(self.Mg[dir]*9.806*factor)
 
   def getAction(self) -> npt.NDArray[np.float64]:
     return np.array([_.action for _ in self.DOF])

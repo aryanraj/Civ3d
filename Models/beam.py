@@ -68,9 +68,9 @@ class Beam:
   def addPointLoad(self, dir:int, val: float, dist: float) -> None:
     raise NotImplementedError("Future feature")
 
-  def addSelfWeight(self, dir:int) -> None:
+  def addSelfWeight(self, dir:int=2, factor:float=-1) -> None:
     for childBeam in self.childBeams:
-      childBeam.addSelfWeight(dir)
+      childBeam.addSelfWeight(dir, factor)
 
   def addMassUDL(self, massPerLength:float) -> None:
     for childBeam in self.childBeams:
