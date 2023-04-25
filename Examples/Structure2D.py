@@ -13,6 +13,7 @@ class Structure2D():
   def __init__(self):
     self.nodes: list[Node] = []
     self.beams: list[Beam] = []
+    self.longitudinalFixityFactor:float = 0
 
     g = 9.806
 
@@ -82,6 +83,11 @@ class Structure2D():
 
   def addFixityFactorForLongitudinalActions(self, fixityFactor:float):
     self.addFixityFactorForBeams(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
+    self.longitudinalFixityFactor += fixityFactor
+
+  def resetConstrainForLongitudinalActions(self):
+    self.addFixityFactorForLongitudinalActions(-self.longitudinalFixityFactor)
+    self.constrainBeamEnds(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams)
 
   @staticmethod
   def addFixityFactorForBeams(beams:list[Beam], fixityFactor:float):
@@ -92,6 +98,14 @@ class Structure2D():
       endStiffnessAMy = fixityFactor * _beam.childBeams[0].section.E * _beam.childBeams[0].section.Iyy / _beam.childBeams[0].L 
       endStiffnessBMy = fixityFactor * _beam.childBeams[-1].section.E * _beam.childBeams[-1].section.Iyy / _beam.childBeams[-1].L 
       _beam.addEndStiffness([0,0,0,0,endStiffnessAMy,0], [0,0,0,0,endStiffnessBMy,0])
+  
+  @staticmethod
+  def constrainBeamEnds(beams:list[Beam]):
+    constraintsA=[1,1,1,1,1,1]
+    constraintsB=[1,1,1,1,1,1]
+    for _beam in beams:
+      _beam.setEndConstrains(constraintsA, constraintsB)
+
 
 if __name__ == "__main__":
   structure = Structure2D()
@@ -104,7 +118,7 @@ if __name__ == "__main__":
   print(structure.truss1.node_by_name("L0").getReaction())
   print(structure.truss1.node_by_name("L8").getReaction())
 
-  fixityFactor = 0
+  fixityFactor = 1000
   structure.addFixityFactorForLongitudinalActions(fixityFactor)
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
@@ -112,7 +126,7 @@ if __name__ == "__main__":
   print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.addFixityFactorForLongitudinalActions(-fixityFactor)
+  structure.resetConstrainForLongitudinalActions()
 
   fixityFactor = 1
   structure.addFixityFactorForLongitudinalActions(fixityFactor)
@@ -122,9 +136,9 @@ if __name__ == "__main__":
   print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.addFixityFactorForLongitudinalActions(-fixityFactor)
+  structure.resetConstrainForLongitudinalActions()
 
-  fixityFactor = 1000
+  fixityFactor = 0
   structure.addFixityFactorForLongitudinalActions(fixityFactor)
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
@@ -132,7 +146,7 @@ if __name__ == "__main__":
   print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.addFixityFactorForLongitudinalActions(-fixityFactor)
+  structure.resetConstrainForLongitudinalActions()
 
   # Display
   view = SimpleView(structure.nodes, structure.beams, V)
