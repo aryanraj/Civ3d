@@ -13,10 +13,10 @@ from sections import sections
 def createTrussCrossMembers(nodeA:Node, nodeB:Node, section:BeamSection, addlNodeDist:float, nodeOffset:float=0.25, beta:float=0., verticalOffset:float=0.) -> Beam:
   # TODO: Relate this with the section width
   axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, beta)
-  n0 = Node(nodeA.coord + axis[0]*nodeOffset + axis[2]*verticalOffset)
-  n1 = Node(nodeA.coord + (addlNodeDist+nodeOffset)*axis[0] + axis[2]*verticalOffset)
-  n2 = Node(nodeB.coord - (addlNodeDist+nodeOffset)*axis[0] + axis[2]*verticalOffset)
-  n3 = Node(nodeB.coord - axis[0]*nodeOffset + axis[2]*verticalOffset)
+  n0 = Node(nodeA.coord + axis[0]*nodeOffset + axis[2]*verticalOffset, axis=axis)
+  n1 = Node(nodeA.coord + (addlNodeDist+nodeOffset)*axis[0] + axis[2]*verticalOffset, axis=axis)
+  n2 = Node(nodeB.coord - (addlNodeDist+nodeOffset)*axis[0] + axis[2]*verticalOffset, axis=axis)
+  n3 = Node(nodeB.coord - axis[0]*nodeOffset + axis[2]*verticalOffset, axis=axis)
   return Beam([n0, n1, n2, n3], section, beta, A=nodeA, B=nodeB)
 
 def createKneeBracings(truss1Beam:Beam, truss2Beam:Beam, crossMember:Beam, section:BeamSection, Aoffset:float, Boffset:float) -> list[Beam]:
@@ -52,13 +52,15 @@ def createLaterals(nodeA1:Node, nodeA2:Node, nodeB1:Node, nodeB2:Node, section:B
   axisA2B1 = utils.getAxisFromTwoNodesAndBeta(nodeA2.coord, nodeB1.coord, 0)
   xoffset = yoffset/np.dot(axisA1B2[0], axisA1A2[1])
   # First beam
-  n0 = Node(nodeA1.coord + axisA1B2[0]*xoffset)
-  n1 = Node(nodeB2.coord - axisA1B2[0]*xoffset)
+  axis = utils.getAxisFromTwoNodesAndBeta(nodeA1.coord, nodeB2.coord, beta=0)
+  n0 = Node(nodeA1.coord + axisA1B2[0]*xoffset, axis=axis)
+  n1 = Node(nodeB2.coord - axisA1B2[0]*xoffset, axis=axis)
   b1 = Beam([n0,ncenter,n1], section, A=nodeA1, B=nodeB2)
   b1.setEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
   # Second beam
-  n0 = Node(nodeA2.coord + axisA2B1[0]*xoffset)
-  n1 = Node(nodeB1.coord - axisA2B1[0]*xoffset)
+  axis = utils.getAxisFromTwoNodesAndBeta(nodeA2.coord, nodeB1.coord, beta=0)
+  n0 = Node(nodeA2.coord + axisA2B1[0]*xoffset, axis=axis)
+  n1 = Node(nodeB1.coord - axisA2B1[0]*xoffset, axis=axis)
   b2 = Beam([n0,ncenter,n1], section, A=nodeA2, B=nodeB1)
   b2.setEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
   return [b1,b2]

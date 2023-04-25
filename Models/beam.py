@@ -32,6 +32,10 @@ class Beam:
         coord=self.B.coord,
         axis=utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.B.coord, beta=beta)
       )
+    if np.any(np.abs(utils.getAxisFromTwoNodesAndBeta(self.nodes[0].coord, self.nodes[1].coord, beta=beta) - self.nodes[0].axis) > 10 * np.finfo(np.float64).eps):
+      raise Exception("Axis of first node should be same as first childBeam")
+    if np.any(np.abs(utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.nodes[-1].coord, beta=beta) - self.nodes[-1].axis) > 10 * np.finfo(np.float64).eps):
+      raise Exception("Axis of last node should be same as last childBeam")
     self.setEndConstrains(constraintsA, constraintsB)
     self.addEndStiffness(self.endStiffnessA, self.endStiffnessB)
     for nodei, nodej in zip(self.nodes[:-1], self.nodes[1:]):

@@ -26,9 +26,9 @@ class StringerAssembly:
     self.beams.extend(self.cross)
 
     self.lateral:list[Beam] = []
-    self.lateral.append(Beam([Node(self.main[0].nodes[0].coord), self.main[1].nodes[1]], sections["StringerLateralBracing"], A=self.main[0].A, constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.lateral.append(Beam([self.main[0].nodes[0], self.main[1].nodes[1]], sections["StringerLateralBracing"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
     self.lateral.append(Beam([self.main[1].nodes[1], self.main[0].nodes[2]], sections["StringerLateralBracing"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
-    self.lateral.append(Beam([self.main[0].nodes[2], Node(self.main[1].nodes[-1].coord)], sections["StringerLateralBracing"], B=self.main[1].B, constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.lateral.append(Beam([self.main[0].nodes[2], self.main[1].nodes[3]], sections["StringerLateralBracing"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
     self.beams.extend(self.lateral)
 
 if __name__ == "__main__":

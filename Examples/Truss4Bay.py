@@ -49,11 +49,11 @@ class Truss4Bay():
       nodeA, nodeB = self.nodes[n1], self.nodes[n2]
       axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, 0)
       bottomVertOffset = 0.8
-      n0 = Node(nodeA.coord + axis[0]*bottomVertOffset/axis[0,2])
+      n0 = Node(nodeA.coord + axis[0]*bottomVertOffset/axis[0,2], axis=axis)
       topVertOffset = -0.28
-      n2 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2])
+      n2 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2], axis=axis)
       topVertOffset += -1.25
-      n1 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2])
+      n1 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2], axis=axis)
       self.nodes.extend([n0,n1,n2])
       self.diagonalBeams.append(Beam([n0,n1,n2], _sec, A=nodeA, B=nodeB))
     self.beams.extend(self.diagonalBeams)
@@ -67,11 +67,11 @@ class Truss4Bay():
       nodeA, nodeB = self.nodes[n1], self.nodes[n2]
       axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, 0)
       bottomVertOffset = 0.8
-      n0 = Node(nodeA.coord + axis[0]*bottomVertOffset/axis[0,2])
+      n0 = Node(nodeA.coord + axis[0]*bottomVertOffset/axis[0,2], axis=axis)
       topVertOffset = -0.28
-      n2 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2])
+      n2 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2], axis=axis)
       topVertOffset += -1.25
-      n1 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2])
+      n1 = Node(nodeB.coord + axis[0]*topVertOffset/axis[0,2], axis=axis)
       self.nodes.extend([n0,n1,n2])
       self.verticalBeams.append(Beam([n0,n1,n2], sections[-1], A=nodeA, B=nodeB))
     self.beams.extend(self.verticalBeams)
