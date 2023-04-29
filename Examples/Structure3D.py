@@ -218,66 +218,26 @@ if __name__ == "__main__":
   print(structure.truss2.node_by_name("L8").getReaction())
   print(structure.truss2.node_by_name("L0").getReaction())
 
-  print("**** Longitudinal Direction Releases ****")
-  fixityFactor = 1000
-  structure.addFixityFactorForLongitudinalActions(fixityFactor)
+  print("**** Full Fixity ****")
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {fixityFactor=}")
+  print(f"Eigenvalue Analysis Results with Full Fixity")
+  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
+    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
+
+  print("**** Adding Releases in both directions ****")
+  longitudinalFixityFactor = 0.01
+  transverseFixityFactor = 0.01
+  structure.addFixityFactorForLongitudinalActions(longitudinalFixityFactor)
+  structure.addFixityFactorForTransverseActions(transverseFixityFactor)
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(300)
+  T = 2*np.pi/D**0.5
+  print(f"Eigenvalue Analysis Results with {longitudinalFixityFactor=} and {transverseFixityFactor=}")
   print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
   structure.resetConstrainForLongitudinalActions()
-
-  fixityFactor = 1
-  structure.addFixityFactorForLongitudinalActions(fixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
-  T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {fixityFactor=}")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
-  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.resetConstrainForLongitudinalActions()
-
-  fixityFactor = 0
-  structure.addFixityFactorForLongitudinalActions(fixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
-  T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {fixityFactor=}")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
-  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.resetConstrainForLongitudinalActions()
-
-  print("**** Transverse Direction Releases ****")
-  fixityFactor = 1000
-  structure.addFixityFactorForTransverseActions(fixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
-  T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {fixityFactor=}")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
-  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.resetConstrainForTransverseActions()
-
-  fixityFactor = 1
-  structure.addFixityFactorForTransverseActions(fixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
-  T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {fixityFactor=}")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
-  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.resetConstrainForTransverseActions()
-
-  fixityFactor = 0
-  structure.addFixityFactorForTransverseActions(fixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
-  T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {fixityFactor=}")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
-  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
   structure.resetConstrainForTransverseActions()
 
   # Display
