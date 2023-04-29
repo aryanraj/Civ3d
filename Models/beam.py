@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
-from . import Node, BeamSection, FixedBeam
+from . import DOFClass, Node, BeamSection, FixedBeam
 from . import utils
 
 @dataclass
@@ -43,6 +43,10 @@ class Beam:
 
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
+
+  @property
+  def DOF(self) -> list[DOFClass]:
+    return sum([_.DOF for _ in self.childBeams], start=[])
 
   def setEndConstrains(self, constraintsA:npt.NDArray[np.bool_]=None, constraintsB:npt.NDArray[np.bool_]=None):
     if not constraintsA is None:
