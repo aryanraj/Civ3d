@@ -169,6 +169,10 @@ class FixedBeam:
     self.AdditionalMassUDL[2] += massPerLength
     massMatrix = self.getMassMatrixUDL(self.L, massPerLength, massPerLength, massPerLength, 0)
     DOFClass.addMass(self.DOF, massMatrix)
+  
+  def getAxialStrainForGlobalDisplacement(self, displacementVector:npt.NDArray[np.float64]) -> float:
+    _displacementVector = self.Tgl @ displacementVector[[_.id for _ in self.DOF]]
+    return (_displacementVector[6] - _displacementVector[0])/self.L
 
   @staticmethod
   def getMassMatrixUDL(L:float, rAx:float, rAy:float, rAz:float, rIxx:float=0) -> npt.NDArray[np.float64]:
