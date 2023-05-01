@@ -111,8 +111,8 @@ class FixedBeam:
   def addLocalFEForce(self, forcel:npt.NDArray[np.float64], loadCases:list[int]) -> None:
     if not type(forcel) is np.ndarray or forcel.ndim != 2:
       raise Exception("The forcel should be an NDArray with ndim=2")
-    if forcel.shape[1] != len(loadCases):
-      raise Exception(f"The forcel matrix should have number of columns same as {len(loadCases)=}")
+    if forcel.shape[1] != 1 and forcel.shape[1] != len(loadCases):
+      raise Exception(f"The forcel matrix should have number of columns either 1 OR {len(loadCases)=}")
     if forcel.shape[0] != self.Tgl.shape[0]:
       raise Exception(f"The forcel matrix should have number of rows same as {self.Tgl.shape[0]=}")
     forceg = self.Tgl.T @ forcel

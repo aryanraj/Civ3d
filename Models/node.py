@@ -89,15 +89,15 @@ class Node:
   def addNodalForce(self, force:npt.NDArray[np.float64], loadCases:list[int]):
     if not type(force) is np.ndarray or force.ndim != 2:
       raise Exception("The force should be an NDArray with ndim=2")
-    if force.shape[1] != len(loadCases):
-      raise Exception(f"The force matrix should have number of columns same as {len(loadCases)=}")
+    if force.shape[1] != 1 and force.shape[1] != len(loadCases):
+      raise Exception(f"The force matrix should have number of columns either 1 OR {len(loadCases)=}")
     if force.shape[0] != len(self.DOF):
       raise Exception(f"The force matrix should have number of rows same as {len(self.DOF)=}")
     for _DOF, _force in zip(self.DOF, force):
       _DOF.addAction(np.array([_force]), loadCases)
 
   def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]):
-    self.addNodalForce(self.Mg[dir]*9.806*factor, loadCases)
+    self.addNodalForce(np.array([self.Mg[dir]*9.806*factor]).T, loadCases)
 
   def getAction(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
     return np.vstack([_.action(loadCases) for _ in self.DOF])
