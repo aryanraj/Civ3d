@@ -11,9 +11,10 @@ from Models import Node, FixedBeam, Beam
 
 class SimpleView():
 
-  def __init__(self, nodes:list[Node]=[], beamsORfixedbeams:list[Union[Beam, FixedBeam]]=[], ModeShapes:Union[npt.NDArray[np.float64],None]=None):
+  def __init__(self, nodes:list[Node]=[], beamsORfixedbeams:list[Union[Beam, FixedBeam]]=[], ModeShapes:Union[npt.NDArray[np.float64],None]=None, ModeShapeTags:Union[list[str], None]=None):
     self.nodes = nodes
     self.ModeShapes = ModeShapes
+    self.ModeShapeTags = ModeShapeTags
     self.nodes_ais:list[AIS_Shape] = []
     self.beams:list[FixedBeam] = []
     self.beams_ais:list[AIS_Shape] = []
@@ -135,7 +136,7 @@ class SimpleView():
     if not self.ModeShapes is None:
       for i in range(self.ModeShapes.shape[1]):
         _callback = (lambda _:lambda:self.displayModeShape(_))(i)
-        _callback.__name__ = f"Mode {i+1}"
+        _callback.__name__ = self.ModeShapeTags[i] if not self.ModeShapeTags is None else f"Mode {i+1}"
         self.add_function_to_menu("Mode", _callback)
     self.displayUndeformed()
     self.start_display()
