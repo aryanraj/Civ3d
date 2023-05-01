@@ -11,8 +11,8 @@ class FixedBeam:
   section: BeamSection
   beta: float = 0 # Angle in degrees
   
-  UDL: list[tuple[int, float, list[int]]] = field(init=False, default_factory=list)
-  PointLoad: list[tuple[int, float, float, list[int]]] = field(init=False, default_factory=list)
+  UDL: list[tuple[int, npt.NDArray[np.float64], list[int]]] = field(init=False, default_factory=list)
+  PointLoad: list[tuple[int, npt.NDArray[np.float64], npt.NDArray[np.float64], list[int]]] = field(init=False, default_factory=list)
   AdditionalMassUDL: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((3,)))
   L: float = field(init=False)
   axis: npt.NDArray[np.float64] = field(init=False)
@@ -109,13 +109,19 @@ class FixedBeam:
     return self.Tgl.T @ self.Ml @ self.Tgl
 
   def addLocalFEForce(self, forcel:npt.NDArray[np.float64], loadCases:list[int]) -> None:
+    if not type(forcel) is np.ndarray or forcel.ndim != 2:
+      raise Exception("The forcel should be an NDArray with ndim=2")
     forceg = self.Tgl.T @ forcel
-    for _DOF, _force in zip(self.DOF, forceg.flatten()):
+    for _DOF, _force in zip(self.DOF, forceg):
       _DOF.addFixedEndReaction(np.array([_force]), loadCases)
 
-  def addUDL(self, dir:int, val:float, loadCases:list[int]) -> None:
+  def addUDL(self, dir:int, val:npt.NDArray[np.float64], loadCases:list[int]) -> None:
+    if not type(val) is np.ndarray or val.ndim == 0:
+      val = np.array([val])
+    if val.ndim != 1:
+      raise Exception("The dimension of val must be 1")
     self.UDL.append((dir, val, loadCases))
-    forcel = np.zeros((12,1))
+    forcel = np.zeros((12, val.shape[0]))
     if dir == 0:
       forcel[0] -= val*self.L/2
       forcel[6] -= val*self.L/2
@@ -131,9 +137,17 @@ class FixedBeam:
       forcel[10] -= val*self.L**2/12
     self.addLocalFEForce(forcel, loadCases)
 
-  def addPointLoad(self, dir:int, val:float, dist:float, loadCases:list[int]) -> None:
+  def addPointLoad(self, dir:int, val:npt.NDArray[np.float64], dist:npt.NDArray[np.float64], loadCases:list[int]) -> None:
+    if not type(val) is np.ndarray or val.ndim == 0:
+      val = np.array([val])
+    if val.ndim != 1:
+      raise Exception("The dimension of val must be 1")
+    if not type(dist) is np.ndarray or dist.ndim == 0:
+      dist = np.array([dist])
+    if dist.ndim != 1:
+      raise Exception("The dimension of val must be 1")
     self.PointLoad.append((dir, val, dist, loadCases))
-    forcel = np.zeros((12,1))
+    forcel = np.zeros((12,val.shape[0]))
     if dir == 0:
       forcel[0] -= val*(1 - dist/self.L)
       forcel[6] -= val*dist/self.L

@@ -86,8 +86,10 @@ class Node:
   def addLumpedMass(self, mass: float):
     self.addMass(np.diag([mass]*3+[0]*3))
 
-  def addNodalForce(self, force: npt.NDArray[np.float64], loadCases:list[int]):
-    for _DOF, _force in zip(self.DOF, force.flatten()):
+  def addNodalForce(self, force:npt.NDArray[np.float64], loadCases:list[int]):
+    if not type(force) is np.ndarray or force.ndim != 2:
+      raise Exception("The force should be an NDArray with ndim=2")
+    for _DOF, _force in zip(self.DOF, force):
       _DOF.addAction(np.array([_force]), loadCases)
 
   def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]):
