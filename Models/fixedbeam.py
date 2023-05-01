@@ -111,6 +111,10 @@ class FixedBeam:
   def addLocalFEForce(self, forcel:npt.NDArray[np.float64], loadCases:list[int]) -> None:
     if not type(forcel) is np.ndarray or forcel.ndim != 2:
       raise Exception("The forcel should be an NDArray with ndim=2")
+    if forcel.shape[1] != len(loadCases):
+      raise Exception(f"The forcel matrix should have number of columns same as {len(loadCases)=}")
+    if forcel.shape[0] != self.Tgl.shape[0]:
+      raise Exception(f"The forcel matrix should have number of rows same as {self.Tgl.shape[0]=}")
     forceg = self.Tgl.T @ forcel
     for _DOF, _force in zip(self.DOF, forceg):
       _DOF.addFixedEndReaction(np.array([_force]), loadCases)
@@ -140,12 +144,12 @@ class FixedBeam:
   def addPointLoad(self, dir:int, val:npt.NDArray[np.float64], dist:npt.NDArray[np.float64], loadCases:list[int]) -> None:
     if not type(val) is np.ndarray or val.ndim == 0:
       val = np.array([val])
-    if val.ndim != 1:
-      raise Exception("The dimension of val must be 1")
+    val = np.array(val, dtype=np.float64)
     if not type(dist) is np.ndarray or dist.ndim == 0:
       dist = np.array([dist])
-    if dist.ndim != 1:
-      raise Exception("The dimension of val must be 1")
+    dist = np.array(dist, dtype=np.float64)
+    if dist.ndim != 1 or val.ndim != 1:
+      raise Exception("The dimension of both val and dist must be 1")
     self.PointLoad.append((dir, val, dist, loadCases))
     forcel = np.zeros((12,val.shape[0]))
     if dir == 0:

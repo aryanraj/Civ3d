@@ -89,6 +89,10 @@ class Node:
   def addNodalForce(self, force:npt.NDArray[np.float64], loadCases:list[int]):
     if not type(force) is np.ndarray or force.ndim != 2:
       raise Exception("The force should be an NDArray with ndim=2")
+    if force.shape[1] != len(loadCases):
+      raise Exception(f"The force matrix should have number of columns same as {len(loadCases)=}")
+    if force.shape[0] != len(self.DOF):
+      raise Exception(f"The force matrix should have number of rows same as {len(self.DOF)=}")
     for _DOF, _force in zip(self.DOF, force):
       _DOF.addAction(np.array([_force]), loadCases)
 

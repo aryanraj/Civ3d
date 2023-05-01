@@ -23,7 +23,13 @@ DOFClass.analyse()
 midSpanMaxDisplacement = n2.getDisplacement([0]).flatten()[1]
 print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
 
-n2.addNodalForce(np.array([0,-10,0,0,0,0]), [0])
+n2.addNodalForce(np.array([[0,-10,0,0,0,0]]).T, [0])
+DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement([0]).flatten()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
+
+for i in range(11):
+  b1.addPointLoad(1, -10, i, [0])
 DOFClass.analyse()
 midSpanMaxDisplacement = n2.getDisplacement([0]).flatten()[1]
 print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
