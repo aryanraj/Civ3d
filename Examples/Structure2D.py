@@ -82,12 +82,12 @@ class Structure2D():
       _.addSelfWeight(dir, factor, loadCases)
 
   def addFixityFactorForLongitudinalActions(self, fixityFactor:float):
-    self.addFixityFactorForBeams(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
+    self.addFixityFactorForBeams(self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
     self.longitudinalFixityFactor += fixityFactor
 
   def resetConstrainForLongitudinalActions(self):
     self.addFixityFactorForLongitudinalActions(-self.longitudinalFixityFactor)
-    self.constrainBeamEnds(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams)
+    self.constrainBeamEnds(self.truss1.diagonalBeams + self.truss1.verticalBeams)
 
   @staticmethod
   def addFixityFactorForBeams(beams:list[Beam], fixityFactor:float):
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
   structure.resetConstrainForLongitudinalActions()
 
-  fixityFactor = 0
+  fixityFactor = 0.01
   structure.addFixityFactorForLongitudinalActions(fixityFactor)
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5

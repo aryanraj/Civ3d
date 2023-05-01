@@ -167,8 +167,8 @@ class Structure3D():
       _.addSelfWeight(dir, factor, loadCases)
 
   def addFixityFactorForLongitudinalActions(self, fixityFactor:float):
-    self.addFixityFactorForBeams(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
-    self.addFixityFactorForBeams(self.truss2.topChordBeams + self.truss2.bottomChordBeams + self.truss2.diagonalBeams + self.truss2.verticalBeams, fixityFactor)
+    self.addFixityFactorForBeams(self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
+    self.addFixityFactorForBeams(self.truss2.diagonalBeams + self.truss2.verticalBeams, fixityFactor)
     for beam in self.stringers:
       self.addFixityFactorForBeams(beam.main, fixityFactor)
     self.longitudinalFixityFactor += fixityFactor
@@ -179,8 +179,8 @@ class Structure3D():
 
   def resetConstrainForLongitudinalActions(self):
     self.addFixityFactorForLongitudinalActions(-self.longitudinalFixityFactor)
-    self.constrainBeamEnds(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams)
-    self.constrainBeamEnds(self.truss2.topChordBeams + self.truss2.bottomChordBeams + self.truss2.diagonalBeams + self.truss2.verticalBeams)
+    self.constrainBeamEnds(self.truss1.diagonalBeams + self.truss1.verticalBeams)
+    self.constrainBeamEnds(self.truss2.diagonalBeams + self.truss2.verticalBeams)
     for beam in self.stringers:
       self.constrainBeamEnds(beam.main)
 
@@ -222,24 +222,34 @@ if __name__ == "__main__":
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
   print(f"Eigenvalue Analysis Results with Full Fixity")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
+    print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
 
-  print("**** Adding Releases in both directions ****")
+  print("**** Adding Releases in longitudinal directions ****")
   longitudinalFixityFactor = 0.01
-  transverseFixityFactor = 0.01
   structure.addFixityFactorForLongitudinalActions(longitudinalFixityFactor)
-  structure.addFixityFactorForTransverseActions(transverseFixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(300)
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
-  print(f"Eigenvalue Analysis Results with {longitudinalFixityFactor=} and {transverseFixityFactor=}")
-  print("No.\tTime:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  print(f"Eigenvalue Analysis Results with {longitudinalFixityFactor=}")
+  print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
-    print(f"{i+1}\t{_T:.3f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
+    print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
   structure.resetConstrainForLongitudinalActions()
+
+  print("**** Adding Releases in transverse directions ****")
+  transverseFixityFactor = 0.01
+  structure.addFixityFactorForTransverseActions(transverseFixityFactor)
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
+  T = 2*np.pi/D**0.5
+  print(f"Eigenvalue Analysis Results with {transverseFixityFactor=}")
+  print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
+    print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
   structure.resetConstrainForTransverseActions()
 
   # Display
-  view = SimpleView(structure.nodes, structure.beams, V)
+  ModeShapes = V
+  ModeShapeTags = [f"Mode {i+1}: {1/_:.2f}Hz" for i,_ in enumerate(T)]
+  view = SimpleView(structure.nodes, structure.beams, ModeShapes, ModeShapeTags)
   view.start()
