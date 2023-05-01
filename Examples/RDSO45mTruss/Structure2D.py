@@ -6,8 +6,8 @@ import numpy.typing as npt
 from Models import DOFClass, Node, BeamSection, Beam
 from Views.simpleStructure import SimpleView
 from Models import utils
-from Truss4Bay import Truss4Bay
-from sections import sections
+from Examples.RDSO45mTruss.Truss4Bay import Truss4Bay
+from Examples.RDSO45mTruss.sections import sections
 
 class Structure2D():
   def __init__(self):

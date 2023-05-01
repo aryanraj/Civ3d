@@ -1,6 +1,6 @@
 from Models import DOFClass, Node, Beam
 from Models import utils
-from sections import sections
+from Examples.RDSO45mTruss.sections import sections
 
 class StringerAssembly:
   def __init__(self, crossGirderA:Beam, crossGirderB:Beam, crossBeamSpacing:float, verticalOffset:float):

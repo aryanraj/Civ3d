@@ -6,9 +6,9 @@ import numpy.typing as npt
 from Models import DOFClass, Node, BeamSection, Beam
 from Models import utils
 from Views.simpleStructure import SimpleView
-from Truss4Bay import Truss4Bay
-from StringerAssembly import StringerAssembly
-from sections import sections
+from Examples.RDSO45mTruss.Truss4Bay import Truss4Bay
+from Examples.RDSO45mTruss.StringerAssembly import StringerAssembly
+from Examples.RDSO45mTruss.sections import sections
 
 def createTrussCrossMembers(nodeA:Node, nodeB:Node, section:BeamSection, addlNodeDist:float, nodeOffset:float=0.25, beta:float=0., verticalOffset:float=0.) -> Beam:
   # TODO: Relate this with the section width
