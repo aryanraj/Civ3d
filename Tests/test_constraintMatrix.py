@@ -1,6 +1,7 @@
 import os
 os.environ["MAX_DOF"] = str(18)
 
+import numpy as np
 from Models import DOFClass, Node
 
 n1 = Node([0,0,0])
@@ -11,7 +12,7 @@ n1.addRestraint([1,1,1,1,1,1])
 n1.constrainChildNode(n2, [1,1,1,1,1,1])
 n2.constrainChildNode(n3, [1,1,1,1,1,1])
 
-n3.addNodalForce([1,0,0,0,0,0])
+n3.addNodalForce(np.array([1,0,0,0,0,0]), [0])
 
 DOFClass.analyse()
-print(n1.getReaction())
+print(n1.getReaction([0]).flatten())

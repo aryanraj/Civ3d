@@ -86,18 +86,18 @@ class Node:
   def addLumpedMass(self, mass: float):
     self.addMass(np.diag([mass]*3+[0]*3))
 
-  def addNodalForce(self, force: npt.NDArray[np.float64]):
-    for _DOF, _force in zip(self.DOF, force):
-      _DOF.addAction(_force)
+  def addNodalForce(self, force: npt.NDArray[np.float64], loadCases:list[int]):
+    for _DOF, _force in zip(self.DOF, force.flatten()):
+      _DOF.addAction(np.array([_force]), loadCases)
 
-  def addSelfWeight(self, dir:int=2, factor:float=-1):
-    self.addNodalForce(self.Mg[dir]*9.806*factor)
+  def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]):
+    self.addNodalForce(self.Mg[dir]*9.806*factor, loadCases)
 
-  def getAction(self) -> npt.NDArray[np.float64]:
-    return np.array([_.action for _ in self.DOF])
+  def getAction(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    return np.vstack([_.action(loadCases) for _ in self.DOF])
 
-  def getReaction(self) -> npt.NDArray[np.float64]:
-    return np.array([_.reaction for _ in self.DOF])
+  def getReaction(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    return np.vstack([_.reaction(loadCases) for _ in self.DOF])
   
-  def getDisplacement(self) -> npt.NDArray[np.float64]:
-    return np.array([_.displacement for _ in self.DOF])
+  def getDisplacement(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    return np.vstack([_.displacement(loadCases) for _ in self.DOF])

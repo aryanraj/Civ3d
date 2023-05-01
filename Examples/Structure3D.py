@@ -160,11 +160,11 @@ class Structure3D():
     for _ in self.top_laterals:
       self.nodes.extend(_.nodes)
 
-  def addSelfWeight(self, dir:int=2, factor:float=-1):
+  def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]):
     for _ in self.beams:
-      _.addSelfWeight(dir, factor)
+      _.addSelfWeight(dir, factor, loadCases)
     for _ in self.nodes:
-      _.addSelfWeight(dir, factor)
+      _.addSelfWeight(dir, factor, loadCases)
 
   def addFixityFactorForLongitudinalActions(self, fixityFactor:float):
     self.addFixityFactorForBeams(self.truss1.topChordBeams + self.truss1.bottomChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
@@ -207,16 +207,16 @@ class Structure3D():
 
 if __name__ == "__main__":
   structure = Structure3D()
-  structure.addSelfWeight()
+  structure.addSelfWeight(2, -1, [0])
   DOFClass.analyse()
 
   np.set_printoptions(suppress=True) # To suppress exponential notation
   print("Static Analysis Results")
   print("Reactions at 4 Nodes (Clockwise from Node L0 of Truss 1)")
-  print(structure.truss1.node_by_name("L0").getReaction())
-  print(structure.truss1.node_by_name("L8").getReaction())
-  print(structure.truss2.node_by_name("L8").getReaction())
-  print(structure.truss2.node_by_name("L0").getReaction())
+  print(structure.truss1.node_by_name("L0").getReaction([0]).flatten())
+  print(structure.truss1.node_by_name("L8").getReaction([0]).flatten())
+  print(structure.truss2.node_by_name("L8").getReaction([0]).flatten())
+  print(structure.truss2.node_by_name("L0").getReaction([0]).flatten())
 
   print("**** Full Fixity ****")
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)

@@ -11,6 +11,7 @@ from .types import DOFTypes
 from . import utils
 
 MAX_DOF: int = int(os.getenv("MAX_DOF", 10000))
+MAX_LOADCASE: int = int(os.getenv("MAX_LOADCASE", 1000))
 
 @dataclass
 class DOFClass():
@@ -24,11 +25,11 @@ class DOFClass():
   DOFList: ClassVar[list[DOFClass]] = []
   StiffnessMatrix: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_DOF), dtype=np.float64)
   MassMatrix: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_DOF), dtype=np.float64)
-  ReactionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
-  ActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
-  DisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
-  ImbalancedActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
-  ImbalancedDisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.float64)
+  ReactionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_LOADCASE), dtype=np.float64)
+  ActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_LOADCASE), dtype=np.float64)
+  DisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_LOADCASE), dtype=np.float64)
+  ImbalancedActionVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_LOADCASE), dtype=np.float64)
+  ImbalancedDisplacementVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,MAX_LOADCASE), dtype=np.float64)
   RestraintVector: ClassVar[sp.lil_array] = sp.lil_array((MAX_DOF,1), dtype=np.bool_)
 
   def __post_init__(self):
@@ -42,46 +43,43 @@ class DOFClass():
   def __del__(self):
     raise NotImplementedError(f"Deletion of {type(self).__name__} is not supported")
 
-  @property
-  def displacement(self):
+  def displacement(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
     """Displacement Property"""
     cls = type(self)
-    return cls.DisplacementVector[self.id,0]
+    return cls.DisplacementVector[[self.id],loadCases].todense()
   
-  @property
-  def reaction(self):
+  def reaction(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
     """Force Property"""
     cls = type(self)
-    return cls.ReactionVector[self.id,0]
+    return cls.ReactionVector[[self.id],loadCases].todense()
   
-  @property
-  def action(self):
+  def action(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
     """Force Property"""
     cls = type(self)
-    return cls.ActionVector[self.id,0]
+    return cls.ActionVector[[self.id],loadCases].todense()
   
   @property
   def isConstrained(self):
     """Checks if DOF constrained or not"""
     return not self.constraints is None
 
-  def addDisplacement(self, val):
+  def addDisplacement(self, val:npt.NDArray[np.float64], loadCases:list[int]):
     cls = type(self)
     if not self.isRestrained:
       raise Exception(f"DOF {self.id} needs to be restrained before adding displacement")
     if self.isConstrained:
       raise Exception(f"Constrained DOF {self.id} can't have displacmeent added to it")
-    cls.ImbalancedDisplacementVector[self.id,0] += val
+    cls.ImbalancedDisplacementVector[[self.id],loadCases] += val
   
-  def addAction(self, val):
+  def addAction(self, val:npt.NDArray[np.float64], loadCases:list[int]):
     cls = type(self)
-    cls.ActionVector[self.id,0] += val
-    cls.ImbalancedActionVector[self.id,0] += val
+    cls.ActionVector[[self.id],loadCases] += val
+    cls.ImbalancedActionVector[[self.id],loadCases] += val
 
-  def addFixedEndReaction(self, val):
+  def addFixedEndReaction(self, val:npt.NDArray[np.float64], locaCases:list[int]):
     cls = type(self)
-    cls.ActionVector[self.id,0] -= val
-    cls.ImbalancedActionVector[self.id,0] -= val
+    cls.ActionVector[[self.id],locaCases] -= val
+    cls.ImbalancedActionVector[[self.id],locaCases] -= val
 
   def addConstraint(self, DOFs:list[DOFClass], factors:list[float]):
     if self.isConstrained:
@@ -110,8 +108,8 @@ class DOFClass():
     cls = type(self)
     self.isRestrained = False
     cls.RestraintVector[self.id,0] = self.isRestrained
-    cls.ImbalancedActionVector[self.id,0] -= cls.ReactionVector[self.id,0]
-    cls.ReactionVector[self.id,0] = 0
+    cls.ImbalancedActionVector[[self.id],:] -= cls.ReactionVector[[self.id],:]
+    cls.ReactionVector[[self.id],:] = 0
 
   @classmethod
   def generateConstraintMatrix(cls) -> sp.lil_array:
@@ -176,7 +174,10 @@ class DOFClass():
 
       Qk = constrainedAction[freeMask]
       Dk = displacement[~freeMask]
-      Du = sp.lil_matrix([splinalg.spsolve(K11, Qk - K12 @ Dk)]).T # Not sure why is sp solve returning list object
+      if Dk.shape[1] == 1:
+        Du = sp.lil_matrix([splinalg.spsolve(K11, Qk - K12 @ Dk)]).T # Not sure why is sp solve returning list object
+      else:
+        Du = splinalg.spsolve(K11, Qk - K12 @ Dk)
       Qu = K21 @ Du + K22 @ Dk
 
       displacement[freeMask] = Du
@@ -190,8 +191,8 @@ class DOFClass():
 
     cls.DisplacementVector += displacement
     cls.ReactionVector += reaction
-    cls.ImbalancedDisplacementVector[:,0] = 0
-    cls.ImbalancedActionVector[:,0] = 0
+    cls.ImbalancedDisplacementVector[:,:] = 0
+    cls.ImbalancedActionVector[:,:] = 0
     return displacement.todense()
 
   @classmethod
@@ -226,3 +227,15 @@ class DOFClass():
       EigenVectors = ConstraintMatrix @ EigenVectors
 
     return EigenValues, EigenVectors.todense(), EffectiveMass, MassParticipationFactor
+
+  @classmethod
+  def getDisplacementVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    return cls.DisplacementVector[:, loadCases].todense()
+
+  @classmethod
+  def getReactionVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    return cls.ReactionVector[:, loadCases].todense()
+
+  @classmethod
+  def getActionVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    return cls.ActionVector[:, loadCases].todense()

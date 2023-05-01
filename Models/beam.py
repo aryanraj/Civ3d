@@ -69,16 +69,16 @@ class Beam:
     self.endStiffnessA += endStiffnessA
     self.endStiffnessB += endStiffnessB
 
-  def addUDL(self, dir: float, val: float) -> None:
+  def addUDL(self, dir: float, val: float, loadCases:list[int]) -> None:
     for childBeam in self.childBeams:
-      childBeam.addUDL(dir, val)
+      childBeam.addUDL(dir, val, loadCases)
 
-  def addPointLoad(self, dir:int, val: float, dist: float) -> None:
+  def addPointLoad(self, dir:int, val: float, dist: float, loadCases:list[int]) -> None:
     raise NotImplementedError("Future feature")
 
-  def addSelfWeight(self, dir:int=2, factor:float=-1) -> None:
+  def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]) -> None:
     for childBeam in self.childBeams:
-      childBeam.addSelfWeight(dir, factor)
+      childBeam.addSelfWeight(dir, factor, loadCases)
 
   def addMassUDL(self, massPerLength:float) -> None:
     for childBeam in self.childBeams:

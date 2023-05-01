@@ -48,7 +48,7 @@ if __name__ == "__main__":
   crossGirderB.B.addRestraint([1,1,1,0,0,0])
 
   for _ in beams:
-    _.addSelfWeight()
+    _.addSelfWeight(2, -1, [0])
   
   DOFClass.analyse()
 
@@ -56,10 +56,10 @@ if __name__ == "__main__":
   np.set_printoptions(suppress=True) # To suppress exponential notation
   print("Selfweight analysis")
   print("Reactions at 4 Nodes (Clockwise from CrossGirderA.A)")
-  print(crossGirderA.A.getReaction())
-  print(crossGirderA.B.getReaction())
-  print(crossGirderB.B.getReaction())
-  print(crossGirderB.A.getReaction())
+  print(crossGirderA.A.getReaction([0]).flatten())
+  print(crossGirderA.B.getReaction([0]).flatten())
+  print(crossGirderB.B.getReaction([0]).flatten())
+  print(crossGirderB.A.getReaction([0]).flatten())
 
   from Views.simpleStructure import SimpleView
   # Display

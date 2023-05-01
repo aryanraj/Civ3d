@@ -11,8 +11,8 @@ class FixedBeam:
   section: BeamSection
   beta: float = 0 # Angle in degrees
   
-  UDL: list[tuple[float]] = field(init=False, default_factory=list)
-  PointLoad: list[tuple[float]] = field(init=False, default_factory=list)
+  UDL: list[tuple[int, float, list[int]]] = field(init=False, default_factory=list)
+  PointLoad: list[tuple[int, float, float, list[int]]] = field(init=False, default_factory=list)
   AdditionalMassUDL: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((3,)))
   L: float = field(init=False)
   axis: npt.NDArray[np.float64] = field(init=False)
@@ -108,13 +108,13 @@ class FixedBeam:
   def Mg(self) -> npt.NDArray[np.float64]:
     return self.Tgl.T @ self.Ml @ self.Tgl
 
-  def addLocalFEForce(self, forcel: npt.NDArray[np.float64]) -> None:
+  def addLocalFEForce(self, forcel:npt.NDArray[np.float64], loadCases:list[int]) -> None:
     forceg = self.Tgl.T @ forcel
-    for _DOF, _force in zip(self.DOF, forceg):
-      _DOF.addFixedEndReaction(_force)
+    for _DOF, _force in zip(self.DOF, forceg.flatten()):
+      _DOF.addFixedEndReaction(np.array([_force]), loadCases)
 
-  def addUDL(self, dir: int, val: float) -> None:
-    self.UDL.append((dir, val))
+  def addUDL(self, dir:int, val:float, loadCases:list[int]) -> None:
+    self.UDL.append((dir, val, loadCases))
     forcel = np.zeros((12,1))
     if dir == 0:
       forcel[0] -= val*self.L/2
@@ -129,10 +129,10 @@ class FixedBeam:
       forcel[8] -= val*self.L/2
       forcel[4] += val*self.L**2/12
       forcel[10] -= val*self.L**2/12
-    self.addLocalFEForce(forcel)
+    self.addLocalFEForce(forcel, loadCases)
 
-  def addPointLoad(self, dir:int, val: float, dist: float) -> None:
-    self.PointLoad.append((dir, val, dist))
+  def addPointLoad(self, dir:int, val:float, dist:float, loadCases:list[int]) -> None:
+    self.PointLoad.append((dir, val, dist, loadCases))
     forcel = np.zeros((12,1))
     if dir == 0:
       forcel[0] -= val*(1 - dist/self.L)
@@ -149,9 +149,9 @@ class FixedBeam:
       a, b = dist, self.L - dist
       forcel[4] += val*a*b**2/self.L**2
       forcel[10] -= val*b*a**2/self.L**2
-    self.addLocalFEForce(forcel)
+    self.addLocalFEForce(forcel, loadCases)
 
-  def addSelfWeight(self, dir:int=2, factor:float=-1) -> None:
+  def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]) -> None:
     udl = (self.section.Area * self.section.rhog + self.AdditionalMassUDL[dir] * 9.806) * factor
     if dir == 0:
       globalDir = np.array([1,0,0])
@@ -159,9 +159,9 @@ class FixedBeam:
       globalDir = np.array([0,1,0])
     else:
       globalDir = np.array([0,0,1])
-    self.addUDL(0, udl*np.dot(globalDir, self.axis[0]))
-    self.addUDL(1, udl*np.dot(globalDir, self.axis[1]))
-    self.addUDL(2, udl*np.dot(globalDir, self.axis[2]))
+    self.addUDL(0, udl*np.dot(globalDir, self.axis[0]), loadCases)
+    self.addUDL(1, udl*np.dot(globalDir, self.axis[1]), loadCases)
+    self.addUDL(2, udl*np.dot(globalDir, self.axis[2]), loadCases)
 
   def addMassUDL(self, massPerLength:float) -> None:
     self.AdditionalMassUDL[0] += massPerLength
@@ -170,9 +170,13 @@ class FixedBeam:
     massMatrix = self.getMassMatrixUDL(self.L, massPerLength, massPerLength, massPerLength, 0)
     DOFClass.addMass(self.DOF, massMatrix)
   
-  def getAxialStrainForGlobalDisplacement(self, displacementVector:npt.NDArray[np.float64]) -> float:
+  def getAxialStrainForGlobalDisplacement(self, displacementVector:npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     _displacementVector = self.Tgl @ displacementVector[[_.id for _ in self.DOF]]
     return (_displacementVector[6] - _displacementVector[0])/self.L
+  
+  def getAxialStrainForLoadCases(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    displacementVector = DOFClass.getDisplacementVector(loadCases)
+    return self.getAxialStrainForGlobalDisplacement(displacementVector)
 
   @staticmethod
   def getMassMatrixUDL(L:float, rAx:float, rAy:float, rAz:float, rIxx:float=0) -> npt.NDArray[np.float64]:
