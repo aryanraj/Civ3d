@@ -193,8 +193,8 @@ class FixedBeam:
     return (_displacementVector[6] - _displacementVector[0])/self.L
   
   def getAxialStrainForLoadCases(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
-    displacementVector = DOFClass.getDisplacementVector(loadCases)
-    return self.getAxialStrainForGlobalDisplacement(displacementVector)
+    _displacementVector = self.Tgl @ np.array([_.displacement(loadCases).flatten() for _ in self.DOF])
+    return (_displacementVector[6] - _displacementVector[0])/self.L
 
   @staticmethod
   def getMassMatrixUDL(L:float, rAx:float, rAy:float, rAz:float, rIxx:float=0) -> npt.NDArray[np.float64]:
