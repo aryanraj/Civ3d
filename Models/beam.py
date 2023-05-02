@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
@@ -88,4 +89,15 @@ class Beam:
   def addMassUDL(self, massPerLength:float) -> None:
     for childBeam in self.childBeams:
       childBeam.addMassUDL(massPerLength)
-      
+
+  @staticmethod
+  def addPointLoadToBeamList(beamList:list[Beam], dir:int, val:float, dist:float, loadCases:list[int]) -> None:
+    for index, (beam1, beam2) in enumerate(zip(beamList[:-1], beamList[1:])):
+      if np.linalg.norm(beam1.nodes[-1].coord - beam2.nodes[0].coord) > 10 * np.finfo(np.float64).eps:
+        raise Exception(f"The beam ends are discontinuous after beam at {index=}")
+    index = 0
+    while index < len(beamList) and dist > (beamLength := sum([_.L for _ in beamList[index].childBeams])):
+      dist -= beamLength
+      index += 1
+    if dist > 0 and index < len(beamList):
+      beamList[index].addPointLoad(dir, val, dist, loadCases)

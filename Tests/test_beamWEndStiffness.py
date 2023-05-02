@@ -14,12 +14,23 @@ b2 = Beam([n2, n3], section, B=n4, constraintsB=[1,1,1,1,1,0])
 b1.addUDL(1, -10, [0])
 b2.addUDL(1, -10, [0])
 DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement([0]).flatten()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
 
 b1.addUDL(1, -10, [0])
 b2.addUDL(1, -10, [0])
 b1.addEndStiffness(endStiffnessA=[0,0,0,0,0,1])
 b2.addEndStiffness(endStiffnessB=[0,0,0,0,0,1])
 DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement([0]).flatten()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
+
+for i in range(1,10):
+  Beam.addPointLoadToBeamList([b1,b2], 1, -10, i, [0])
+DOFClass.analyse()
+midSpanMaxDisplacement = n2.getDisplacement([0]).flatten()[1]
+print(f"Maximum displacement @ midspan is {midSpanMaxDisplacement}")
+
 
 print(DOFClass.getDisplacementVector([0]).flatten())
 print(DOFClass.getActionVector([0]).flatten())
