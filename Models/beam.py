@@ -17,6 +17,8 @@ class Beam:
   endStiffnessA: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
   endStiffnessB: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
   childBeams: list[FixedBeam] = field(init=False, default_factory=list)
+  endStiffnessFactorA: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros(6))
+  endStiffnessFactorB: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros(6))
 
   def __post_init__(self, section:BeamSection, beta:float, constraintsA:npt.NDArray[np.bool_], constraintsB:npt.NDArray[np.bool_]):
     if len(self.nodes) < 2:
@@ -69,6 +71,39 @@ class Beam:
     self.B.addChildNodeStiffness(self.nodes[-1], endStiffnessB)
     self.endStiffnessA += endStiffnessA
     self.endStiffnessB += endStiffnessB
+
+  def _addEndStiffnessFactor(self, endStiffnessFactorA:npt.NDArray[np.float64], endStiffnessFactorB:npt.NDArray[np.float64]):
+    endSectionA = self.childBeams[0].section
+    endStiffnessCoefficientA = np.array([
+      endSectionA.E * endSectionA.Area,
+      endSectionA.G * endSectionA.Area,
+      endSectionA.G * endSectionA.Area,
+      endSectionA.G * endSectionA.Ixx,
+      endSectionA.E * endSectionA.Iyy,
+      endSectionA.E * endSectionA.Izz,
+      ])
+    endSectionB = self.childBeams[-1].section
+    endStiffnessCoefficientB = np.array([
+      endSectionB.E * endSectionB.Area,
+      endSectionB.G * endSectionB.Area,
+      endSectionB.G * endSectionB.Area,
+      endSectionB.G * endSectionB.Ixx,
+      endSectionB.E * endSectionB.Iyy,
+      endSectionB.E * endSectionB.Izz,
+      ])
+    self.addEndStiffness(endStiffnessFactorA * endStiffnessCoefficientA, endStiffnessFactorB * endStiffnessCoefficientB)
+    self.endStiffnessFactorA += endStiffnessFactorA
+    self.endStiffnessFactorB += endStiffnessFactorB
+
+  def setEndStiffnessFactor(self, endStiffnessFactorA:npt.NDArray[np.float64]=None, endStiffnessFactorB:npt.NDArray[np.float64]=None):
+    if endStiffnessFactorA is None:
+      endStiffnessFactorA = np.zeros(6)
+    if endStiffnessFactorB is None:
+      endStiffnessFactorB = np.zeros(6)
+    endStiffnessFactorA, endStiffnessFactorB = np.array(endStiffnessFactorA), np.array(endStiffnessFactorB)
+    if endStiffnessFactorA.ndim != 1 or endStiffnessFactorB.ndim != 1:
+      raise Exception("endStiffnessFactor should be 1-Dimensional")
+    self._addEndStiffnessFactor(endStiffnessFactorA - self.endStiffnessFactorA, endStiffnessFactorB - self.endStiffnessFactorB)
 
   def addUDL(self, dir:int, val:float, loadCases:list[int]) -> None:
     for childBeam in self.childBeams:

@@ -69,8 +69,6 @@ class Structure3D():
   def __init__(self):
     self.nodes: list[Node] = []
     self.beams: list[Beam] = []
-    self.longitudinalFixityFactor:float = 0
-    self.transverseFixityFactor:float = 0
 
     self.truss1 = Truss4Bay([0,0,0], [5.905,0,7.315], [
       sections["BottomChordL0L2"], sections["BottomChordL2L4"], sections["BottomChordL2L4"], sections["BottomChordL0L2"],
@@ -166,44 +164,34 @@ class Structure3D():
     for _ in self.nodes:
       _.addSelfWeight(dir, factor, loadCases)
 
-  def addFixityFactorForLongitudinalActions(self, fixityFactor:float):
-    self.addFixityFactorForBeams(self.truss1.diagonalBeams + self.truss1.verticalBeams, fixityFactor)
-    self.addFixityFactorForBeams(self.truss2.diagonalBeams + self.truss2.verticalBeams, fixityFactor)
-    for beam in self.stringers:
-      self.addFixityFactorForBeams(beam.main, fixityFactor)
-    self.longitudinalFixityFactor += fixityFactor
+  def setFixityFactorForLongitudinalActions(self, fixityFactor:float, shouldConstrain:bool=False):
+    beams = self.truss1.bottomChordBeams + self.truss1.topChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams + \
+      self.truss2.bottomChordBeams + self.truss2.topChordBeams + self.truss2.diagonalBeams + self.truss2.verticalBeams
+    for beam in beams:
+      if shouldConstrain:
+        beam.setEndConstrains([1,1,1,1,1,1], [1,1,1,1,1,1])
+      else:
+        beam.setEndConstrains([0,1,1,1,1,1], [0,1,1,1,1,1])
+      beam.setEndStiffnessFactor([fixityFactor,0,0,0,0,0], [fixityFactor,0,0,0,0,0])
+    for stringer in self.stringers:
+      if shouldConstrain:
+        stringer.main[0].setEndConstrains([1,1,1,1,1,1], [1,1,1,1,1,1])
+        stringer.main[1].setEndConstrains([1,1,1,1,1,1], [1,1,1,1,1,1])
+      else:
+        stringer.main[0].setEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
+        stringer.main[1].setEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
+      stringer.main[0].setEndStiffnessFactor([0,0,0,0,fixityFactor,0], [0,0,0,0,fixityFactor,0])
+      stringer.main[1].setEndStiffnessFactor([0,0,0,0,fixityFactor,0], [0,0,0,0,fixityFactor,0])
 
-  def addFixityFactorForTransverseActions(self, fixityFactor:float):
-    self.addFixityFactorForBeams(self.cross_girders + self.sway_girders + self.portal_girders, fixityFactor)
-    self.transverseFixityFactor += fixityFactor
+  def setFixityFactorForTransverseActions(self, fixityFactor:float, shouldConstrain:bool=False):
+    beams = self.cross_girders + self.sway_girders + self.portal_girders
+    for beam in beams:
+      if shouldConstrain:
+        beam.setEndConstrains([1,1,1,1,1,1], [1,1,1,1,1,1])
+      else:
+        beam.setEndConstrains([1,1,1,1,0,1], [1,1,1,1,0,1])
+      beam.setEndStiffnessFactor([0,0,0,0,fixityFactor,0], [0,0,0,0,fixityFactor,0])
 
-  def resetConstrainForLongitudinalActions(self):
-    self.addFixityFactorForLongitudinalActions(-self.longitudinalFixityFactor)
-    self.constrainBeamEnds(self.truss1.diagonalBeams + self.truss1.verticalBeams)
-    self.constrainBeamEnds(self.truss2.diagonalBeams + self.truss2.verticalBeams)
-    for beam in self.stringers:
-      self.constrainBeamEnds(beam.main)
-
-  def resetConstrainForTransverseActions(self):
-    self.addFixityFactorForTransverseActions(-self.transverseFixityFactor)
-    self.constrainBeamEnds(self.cross_girders + self.sway_girders + self.portal_girders)
-
-  @staticmethod
-  def addFixityFactorForBeams(beams:list[Beam], fixityFactor:float):
-    constraintsA=[1,1,1,1,0,1]
-    constraintsB=[1,1,1,1,0,1]
-    for _beam in beams:
-      _beam.setEndConstrains(constraintsA, constraintsB)
-      endStiffnessAMy = fixityFactor * _beam.childBeams[0].section.E * _beam.childBeams[0].section.Iyy / _beam.childBeams[0].L 
-      endStiffnessBMy = fixityFactor * _beam.childBeams[-1].section.E * _beam.childBeams[-1].section.Iyy / _beam.childBeams[-1].L 
-      _beam.addEndStiffness([0,0,0,0,endStiffnessAMy,0], [0,0,0,0,endStiffnessBMy,0])
-
-  @staticmethod
-  def constrainBeamEnds(beams:list[Beam]):
-    constraintsA=[1,1,1,1,1,1]
-    constraintsB=[1,1,1,1,1,1]
-    for _beam in beams:
-      _beam.setEndConstrains(constraintsA, constraintsB)
 
 if __name__ == "__main__":
   structure = Structure3D()
@@ -228,25 +216,25 @@ if __name__ == "__main__":
 
   print("**** Adding Releases in longitudinal directions ****")
   longitudinalFixityFactor = 0.01
-  structure.addFixityFactorForLongitudinalActions(longitudinalFixityFactor)
+  structure.setFixityFactorForLongitudinalActions(longitudinalFixityFactor)
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
   print(f"Eigenvalue Analysis Results with {longitudinalFixityFactor=}")
   print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.resetConstrainForLongitudinalActions()
+  structure.setFixityFactorForLongitudinalActions(0, True)
 
   print("**** Adding Releases in transverse directions ****")
   transverseFixityFactor = 0.01
-  structure.addFixityFactorForTransverseActions(transverseFixityFactor)
+  structure.setFixityFactorForTransverseActions(transverseFixityFactor)
   D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
   T = 2*np.pi/D**0.5
   print(f"Eigenvalue Analysis Results with {transverseFixityFactor=}")
   print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
-  structure.resetConstrainForTransverseActions()
+  structure.setFixityFactorForTransverseActions(0, True)
 
   # Display
   ModeShapes = V
