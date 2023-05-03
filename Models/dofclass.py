@@ -1,4 +1,5 @@
 from __future__ import annotations
+import warnings
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse as sp
@@ -196,6 +197,14 @@ class DOFClass():
     return displacement.todense()
 
   @classmethod
+  def resetAllActionsAndReactions(cls):
+    cls.ReactionVector[:,:] = 0
+    cls.ActionVector[:,:] = 0
+    cls.DisplacementVector[:,:] = 0
+    cls.ImbalancedActionVector[:,:] = 0
+    cls.ImbalancedDisplacementVector[:,:] = 0
+
+  @classmethod
   def eig(cls, nModes) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     ConstraintMatrix = cls.generateConstraintMatrix()
     Kg = ConstraintMatrix.T @ cls.StiffnessMatrix @ ConstraintMatrix
@@ -230,12 +239,15 @@ class DOFClass():
 
   @classmethod
   def getDisplacementVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    warnings.warn("Calling todense() on DisplacementVector is very costly")
     return cls.DisplacementVector[:, loadCases].todense()
 
   @classmethod
   def getReactionVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    warnings.warn("Calling todense() on ReactionVector is very costly")
     return cls.ReactionVector[:, loadCases].todense()
 
   @classmethod
   def getActionVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
+    warnings.warn("Calling todense() on ActionVector is very costly")
     return cls.ActionVector[:, loadCases].todense()
