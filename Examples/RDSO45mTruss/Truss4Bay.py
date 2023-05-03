@@ -28,16 +28,26 @@ class Truss4Bay():
     self.bottomChordBeams: list[Beam] = []
     _nodes = self.nodes[:self.nBottomNodes]
     _secs = sections[:self.nBottomBays]
-    for n0, n1, n2, sec in zip(_nodes[:-2:2], _nodes[1:-1:2], _nodes[2::2], _secs):
-      self.bottomChordBeams.append(Beam([n0, n1, n2], sec))
+    for nodeA, n1, nodeB, sec in zip(_nodes[:-2:2], _nodes[1:-1:2], _nodes[2::2], _secs):
+      axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, 0)
+      offset = 0.4
+      n0 = Node(nodeA.coord + axis[0]*offset)
+      n2 = Node(nodeB.coord - axis[0]*offset)
+      self.nodes.extend([n0, n2])
+      self.bottomChordBeams.append(Beam([n0, n1, n2], sec, A=nodeA, B=nodeB))
     self.beams.extend(self.bottomChordBeams)
   
     # Top Chord beams
     self.topChordBeams:list[Beam] = []
     _nodes = self.nodes[self.nBottomNodes:self.nBottomNodes+self.nTopNodes]
     _secs = sections[self.nBottomBays:self.nBottomBays+self.nTopBays]
-    for n0, n1, n2, sec in zip(_nodes[:-2:2], _nodes[1:-1:2], _nodes[2::2], _secs):
-      self.topChordBeams.append(Beam([n0, n1, n2], sec))
+    for nodeA, n1, nodeB, sec in zip(_nodes[:-2:2], _nodes[1:-1:2], _nodes[2::2], _secs):
+      axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, 0)
+      offset = 0.4
+      n0 = Node(nodeA.coord + axis[0]*offset)
+      n2 = Node(nodeB.coord - axis[0]*offset)
+      self.nodes.extend([n0, n2])
+      self.topChordBeams.append(Beam([n0, n1, n2], sec, A=nodeA, B=nodeB))
     self.beams.extend(self.topChordBeams)
   
     # Diagonal beams
