@@ -78,6 +78,15 @@ class Node:
   def addStiffness(self, K: npt.NDArray[np.float64]):
     self.Kg += K
     DOFClass.addStiffness(self.DOF, K)
+  
+  def setStiffness(self, KTarget:npt.NDArray[np.float64]):
+    if not type(KTarget) is np.ndarray:
+      KTarget = np.array(KTarget, dtype=np.float64)
+    if KTarget.ndim == 1:
+      KTarget = np.diag(KTarget)
+    elif KTarget.ndim != 2:
+      raise Exception("The dimension of K should either be 1 or 2")
+    self.addStiffness(KTarget - self.Kg)
 
   def addMass(self, M: npt.NDArray[np.float64]):
     self.Mg += M
