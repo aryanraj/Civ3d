@@ -164,6 +164,12 @@ class Structure3D():
     for _ in self.nodes:
       _.addSelfWeight(dir, factor, loadCases)
 
+  def setMassFactor(self, factor:float) -> None:
+    for _ in self.beams:
+      _.setAdditionalMassFactor(factor-1.)
+    # Not doing for Node as the functionality is not implemented well
+    # TODO: Add functionality to specify additional Mass factor
+
   def setFixityFactorForLongitudinalActions(self, fixityFactor:float, shouldConstrain:bool=False):
     beams = self.truss1.bottomChordBeams + self.truss1.topChordBeams + self.truss1.diagonalBeams + self.truss1.verticalBeams + \
       self.truss2.bottomChordBeams + self.truss2.topChordBeams + self.truss2.diagonalBeams + self.truss2.verticalBeams
@@ -195,6 +201,7 @@ class Structure3D():
 
 if __name__ == "__main__":
   structure = Structure3D()
+  structure.setMassFactor(1.0)
   structure.addSelfWeight(2, -1, [0])
   DOFClass.analyse()
 

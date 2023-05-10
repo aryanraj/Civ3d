@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Union
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
@@ -125,9 +126,17 @@ class Beam:
     for childBeam in self.childBeams:
       childBeam.addSelfWeight(dir, factor, loadCases)
 
-  def addMassUDL(self, massPerLength:float) -> None:
+  def addMassUDL(self, massUDL:Union[float, npt.NDArray[np.float64]]) -> None:
     for childBeam in self.childBeams:
-      childBeam.addMassUDL(massPerLength)
+      childBeam.addMassUDL(massUDL)
+
+  def setAdditionalMassUDL(self, additionalMassUDL:Union[float, npt.NDArray[np.float64]]) -> None:
+    for childBeam in self.childBeams:
+      childBeam.setAdditionalMassUDL(additionalMassUDL)
+
+  def setAdditionalMassFactor(self, selfWeightFactor:Union[float, npt.NDArray[np.float64]]) -> None:
+    for childBeam in self.childBeams:
+      childBeam.setAdditionalMassFactor(selfWeightFactor)
 
   @staticmethod
   def addPointLoadToBeamList(beamList:list[Beam], dir:int, val:float, dist:float, loadCases:list[int]) -> None:

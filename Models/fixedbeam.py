@@ -1,8 +1,9 @@
+from typing import Union
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field
 from . import DOFClass, Node, BeamSection 
-from .utils import getAxisFromTwoNodesAndBeta, globalToLocalBasisChangeMatrix
+from .utils import getAxisFromTwoNodesAndBeta, globalToLocalBasisChangeMatrix, ensure1DNumpyArray
 
 @dataclass
 class FixedBeam:
@@ -181,12 +182,26 @@ class FixedBeam:
     self.addUDL(1, udl*np.dot(globalDir, self.axis[1]), loadCases)
     self.addUDL(2, udl*np.dot(globalDir, self.axis[2]), loadCases)
 
-  def addMassUDL(self, massPerLength:float) -> None:
-    self.AdditionalMassUDL[0] += massPerLength
-    self.AdditionalMassUDL[1] += massPerLength
-    self.AdditionalMassUDL[2] += massPerLength
-    massMatrix = self.getMassMatrixUDL(self.L, massPerLength, massPerLength, massPerLength, 0)
+  def addMassUDL(self, massUDL:Union[float, npt.NDArray[np.float64]]) -> None:
+    if type(massUDL) is float:
+      massUDL = np.ones((3,))*massUDL
+    massUDL = ensure1DNumpyArray(massUDL, np.float64, np.zeros((3,)))
+    self.AdditionalMassUDL += massUDL
+    massMatrix = self.getMassMatrixUDL(self.L, *massUDL, 0)
     DOFClass.addMass(self.DOF, massMatrix)
+
+  def setAdditionalMassUDL(self, additionalMassUDL:Union[float, npt.NDArray[np.float64]]) -> None:
+    if type(additionalMassUDL) is float:
+      additionalMassUDL = np.ones((3,))*additionalMassUDL
+    additionalMassUDL = ensure1DNumpyArray(additionalMassUDL, np.float64, np.zeros((3,)))
+    self.addMassUDL(additionalMassUDL - self.AdditionalMassUDL)
+  
+  def setAdditionalMassFactor(self, selfWeightFactor:Union[float, npt.NDArray[np.float64]]) -> None:
+    if type(selfWeightFactor) is float:
+      selfWeightFactor = np.ones((3,))*selfWeightFactor
+    selfWeightFactor = ensure1DNumpyArray(selfWeightFactor, np.float64, np.zeros((3,)))
+    additionalMassUDL = selfWeightFactor * self.section.Area * self.section.rho
+    self.setAdditionalMassUDL(additionalMassUDL)
   
   def getAxialStrainForGlobalDisplacement(self, displacementVector:npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     _displacementVector = self.Tgl @ displacementVector[[_.id for _ in self.DOF]]
@@ -239,5 +254,10 @@ class FixedBeam:
       [ 22*L, 13*L, 4*L2,-3*L2],
       [-13*L,-22*L,-3*L2, 4*L2],
     ], dtype=np.float64)
-    Mk_z = Mk_y/rAyL_420*rAzL_420
+    Mk_z = rAzL_420*np.array([
+      [  156,   54, 22*L,-13*L],
+      [   54,  156, 13*L,-22*L],
+      [ 22*L, 13*L, 4*L2,-3*L2],
+      [-13*L,-22*L,-3*L2, 4*L2],
+    ], dtype=np.float64)
     return Tlk_xd.T @ Mk_xd @ Tlk_xd + Tlk_xr.T @ Mk_xr @ Tlk_xr + Tlk_y.T @ Mk_y @ Tlk_y + Tlk_z.T @ Mk_z @ Tlk_z
