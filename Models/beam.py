@@ -12,15 +12,17 @@ class Beam:
   beta: InitVar[float] = 0 # Angle in degrees
   A: Node = None
   B: Node = None
-  constraintsA: InitVar[npt.NDArray[np.bool_]] = np.ones((6,),dtype=np.bool_)
-  constraintsB: InitVar[npt.NDArray[np.bool_]] = np.ones((6,),dtype=np.bool_)
+  constraintsA: npt.NDArray[np.bool_] = None
+  constraintsB: npt.NDArray[np.bool_] = None
   endStiffnessA: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
   endStiffnessB: npt.NDArray[np.float64] = field(default_factory=lambda:np.zeros((6,6)))
   childBeams: list[FixedBeam] = field(init=False, default_factory=list)
   endStiffnessFactorA: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros(6))
   endStiffnessFactorB: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros(6))
 
-  def __post_init__(self, section:BeamSection, beta:float, constraintsA:npt.NDArray[np.bool_], constraintsB:npt.NDArray[np.bool_]):
+  def __post_init__(self, section:BeamSection, beta:float):
+    self.constraintsA = utils.ensure1DNumpyArray(self.constraintsA, np.bool_, [1,1,1,1,1,1])
+    self.constraintsB = utils.ensure1DNumpyArray(self.constraintsB, np.bool_, [1,1,1,1,1,1])
     if len(self.nodes) < 2:
       raise Exception("Supply minimum of 2 nodes")
     if self.A is None:
@@ -39,7 +41,7 @@ class Beam:
       raise Exception("Axis of first node should be same as first childBeam")
     if np.any(np.abs(utils.getAxisFromTwoNodesAndBeta(self.nodes[-2].coord, self.nodes[-1].coord, beta=beta) - self.nodes[-1].axis) > 10 * np.finfo(np.float64).eps):
       raise Exception("Axis of last node should be same as last childBeam")
-    self.setEndConstrains(constraintsA, constraintsB)
+    self.setEndConstrains(self.constraintsA, self.constraintsB)
     self.addEndStiffness(self.endStiffnessA, self.endStiffnessB)
     for nodei, nodej in zip(self.nodes[:-1], self.nodes[1:]):
       self.childBeams.append(FixedBeam(nodei, nodej, section, beta))
@@ -53,8 +55,10 @@ class Beam:
 
   def setEndConstrains(self, constraintsA:npt.NDArray[np.bool_]=None, constraintsB:npt.NDArray[np.bool_]=None):
     if not constraintsA is None:
+      self.constraintsA = utils.ensure1DNumpyArray(constraintsA, np.bool_, [1,1,1,1,1,1])
       self.A.constrainChildNode(self.nodes[0], constraintsA)
     if not constraintsB is None:
+      self.constraintsB = utils.ensure1DNumpyArray(constraintsB, np.bool_, [1,1,1,1,1,1])
       self.B.constrainChildNode(self.nodes[-1], constraintsB)
 
   def addEndStiffness(self, endStiffnessA:npt.NDArray[np.float64]=None, endStiffnessB:npt.NDArray[np.float64]=None):
