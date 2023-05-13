@@ -17,6 +17,7 @@ class FixedBeam:
   AdditionalMassUDL: npt.NDArray[np.float64] = field(init=False, default_factory=lambda:np.zeros((3,)))
   L: float = field(init=False)
   axis: npt.NDArray[np.float64] = field(init=False)
+  stiffnessFactor: float = field(init=False, default=1.)
 
   def __post_init__(self):
     # Total Length of the beam
@@ -202,6 +203,10 @@ class FixedBeam:
     selfWeightFactor = ensure1DNumpyArray(selfWeightFactor, np.float64, np.zeros((3,)))
     additionalMassUDL = selfWeightFactor * self.section.Area * self.section.rho
     self.setAdditionalMassUDL(additionalMassUDL)
+
+  def setStiffnessFactor(self, stiffnessFactor:float) -> None:
+    DOFClass.addStiffness(self.DOF, self.Kg*(stiffnessFactor - self.stiffnessFactor))
+    self.stiffnessFactor = stiffnessFactor
   
   def getAxialStrainForGlobalDisplacement(self, displacementVector:npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     _displacementVector = self.Tgl @ displacementVector[[_.id for _ in self.DOF]]
