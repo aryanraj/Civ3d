@@ -30,7 +30,7 @@ class Truss4Bay():
     _secs = sections[:self.nBottomBays]
     for nodeA, n1, nodeB, sec in zip(_nodes[:-2:2], _nodes[1:-1:2], _nodes[2::2], _secs):
       axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, 0)
-      offset = 0.4
+      offset = 0.0
       n0 = Node(nodeA.coord + axis[0]*offset)
       n2 = Node(nodeB.coord - axis[0]*offset)
       self.nodes.extend([n0, n2])
@@ -43,7 +43,7 @@ class Truss4Bay():
     _secs = sections[self.nBottomBays:self.nBottomBays+self.nTopBays]
     for nodeA, n1, nodeB, sec in zip(_nodes[:-2:2], _nodes[1:-1:2], _nodes[2::2], _secs):
       axis = utils.getAxisFromTwoNodesAndBeta(nodeA.coord, nodeB.coord, 0)
-      offset = 0.4
+      offset = 0.0
       n0 = Node(nodeA.coord + axis[0]*offset)
       n2 = Node(nodeB.coord - axis[0]*offset)
       self.nodes.extend([n0, n2])

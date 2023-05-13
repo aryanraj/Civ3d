@@ -78,8 +78,8 @@ class Structure3D():
       sections["EndRakerL0U1"],
       sections["Verticals"],
     ])
-    self.truss1.node_by_name("L0").addRestraint([1,1,1,0,0,0])
-    self.truss1.node_by_name("L8").addRestraint([0,1,1,0,0,0])
+    self.truss1.node_by_name("L0").addRestraint([0,1,1,0,0,0])
+    self.truss1.node_by_name("L8").addRestraint([1,1,1,0,0,0])
     self.nodes.extend(self.truss1.nodes)
     self.beams.extend(self.truss1.beams)
     self.truss2 = Truss4Bay([0,5.28,0], [5.905,5.28,7.315], [
@@ -90,8 +90,8 @@ class Structure3D():
       sections["EndRakerL0U1"],
       sections["Verticals"],
     ])
-    self.truss2.node_by_name("L0").addRestraint([1,0,1,0,0,0])
-    self.truss2.node_by_name("L8").addRestraint([0,0,1,0,0,0])
+    self.truss2.node_by_name("L0").addRestraint([0,0,1,0,0,0])
+    self.truss2.node_by_name("L8").addRestraint([1,0,1,0,0,0])
     self.nodes.extend(self.truss2.nodes)
     self.beams.extend(self.truss2.beams)
 
