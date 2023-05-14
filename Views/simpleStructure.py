@@ -25,16 +25,21 @@ class SimpleView():
       elif type(beamORfixedbeam) is FixedBeam:
         self.beams.append(beamORfixedbeam)
 
+    self.display, self.start_display, self.add_menu, self.add_function_to_menu = init_display()
+    viewCube = AIS_ViewCube()
+    viewCube.SetSize(100)
+    self.display.Context.Display(viewCube, False)
+
     for node in self.nodes:
       dirMain = gp_Dir(*node.axis[0])
       dirCrossSectionX = gp_Dir(*node.axis[1])
       ax = gp_Ax2(gp_Pnt(*node.coord*1000), dirMain, dirCrossSectionX)
       sphere = BRepPrimAPI_MakeSphere(ax, 150, 0, np.pi/2, np.pi/2)
       sphere.Build()
-      sphere_shape = sphere.Shape()
-      ais_sphere = AIS_Shape(sphere_shape)
+      ais_sphere = AIS_Shape(sphere.Shape())
       red = Quantity_Color(0.9, 0.1, 0.1, Quantity_TOC_RGB)
       ais_sphere.SetColor(red)
+      self.display.Context.Display(ais_sphere, True)
       self.nodes_ais.append(ais_sphere)
 
     for beam in self.beams:
@@ -43,30 +48,12 @@ class SimpleView():
       ax = gp_Ax2(gp_Pnt(*beam.i.coord*1000), dirMain, dirCrossSectionX)
       cylinder = BRepPrimAPI_MakeCylinder(ax, 50, beam.L*1000)
       cylinder.Build()
-      cylinder_shape = cylinder.Shape()
-      ais_cylinder = AIS_Shape(cylinder_shape)
+      ais_cylinder = AIS_Shape(cylinder.Shape())
+      self.display.Context.Display(ais_cylinder, True)
       self.beams_ais.append(ais_cylinder)
-
-    self.display, self.start_display, self.add_menu, self.add_function_to_menu = init_display()
-    viewCube = AIS_ViewCube()
-    viewCube.SetSize(100)
-    self.display.Context.Display(viewCube, False)
-
-  def displayUndeformed(self):
-    # self.display.EraseAll()
-    for ais in self.nodes_ais:
-      self.display.Context.Display(ais, True)
-    for ais in self.beams_ais:
-      self.display.Context.Display(ais, True)
+    
     self.display.FitAll()
 
-  def displayDeformed(self, nodeDisplacementVector:tuple[npt.NDArray, npt.NDArray], beamDisplacementVector:tuple[npt.NDArray, npt.NDArray], factor:float=1):
-    for index, (displacementVector, rotationVector) in enumerate(nodeDisplacementVector):
-      self._translateNode(index, displacementVector*factor, rotationVector*factor)
-    for index, (iDisplacementVector, jDisplacementVector) in enumerate(beamDisplacementVector):
-      self._displaceBeamByijDisplacement(index, iDisplacementVector*factor, jDisplacementVector*factor)
-    self.display.Context.UpdateCurrentViewer()
-  
   def _translateNode(self, index:int, displacementVector:npt.NDArray[np.float64], rotatationVector:npt.NDArray[np.float64]) -> None:
     node = self.nodes[index]
     node_ais = self.nodes_ais[index]
@@ -97,8 +84,8 @@ class SimpleView():
 
     toploc = TopLoc_Location(beamTranslateTrsf*beamRotateTrsf)
     self.display.Context.SetLocation(beam_ais, toploc)
-  
-  def displayModeShape(self, modeNumber:int = 0) -> None:
+
+  def _getDisplacementVectors(self, modeNumber:int = 0) -> tuple[list[npt.NDArray[np.float64]], list[tuple[npt.NDArray[np.float64],npt.NDArray[np.float64]]]]:
     nodeDisplacementVector: list[npt.NDArray[np.float64]] = []
     for node in self.nodes:
       displacementVector = node.DOF[0].dir * self.ModeShapes[node.DOF[0].id][modeNumber] \
@@ -109,7 +96,7 @@ class SimpleView():
         + node.DOF[5].dir * self.ModeShapes[node.DOF[5].id][modeNumber]
       nodeDisplacementVector.append((displacementVector, rotationVector))
 
-    beamDisplacementVector: list[tuple(npt.NDArray[np.float64],npt.NDArray[np.float64])] = []
+    beamDisplacementVector: list[tuple[npt.NDArray[np.float64],npt.NDArray[np.float64]]] = []
     for beam in self.beams:
       iDisplacementVector = beam.i.DOF[0].dir * self.ModeShapes[beam.i.DOF[0].id][modeNumber] \
         + beam.i.DOF[1].dir * self.ModeShapes[beam.i.DOF[1].id][modeNumber] \
@@ -118,7 +105,17 @@ class SimpleView():
         + beam.j.DOF[1].dir * self.ModeShapes[beam.j.DOF[1].id][modeNumber] \
         + beam.j.DOF[2].dir * self.ModeShapes[beam.j.DOF[2].id][modeNumber]
       beamDisplacementVector.append((iDisplacementVector, jDisplacementVector))
+    return nodeDisplacementVector, beamDisplacementVector
 
+  def displayDeformed(self, nodeDisplacementVector:tuple[npt.NDArray, npt.NDArray], beamDisplacementVector:tuple[npt.NDArray, npt.NDArray], factor:float=1):
+    for index, (displacementVector, rotationVector) in enumerate(nodeDisplacementVector):
+      self._translateNode(index, displacementVector*factor, rotationVector*factor)
+    for index, (iDisplacementVector, jDisplacementVector) in enumerate(beamDisplacementVector):
+      self._displaceBeamByijDisplacement(index, iDisplacementVector*factor, jDisplacementVector*factor)
+    self.display.Context.UpdateCurrentViewer()
+  
+  def displayModeShapeAnimated(self, modeNumber:int = 0) -> None:
+    nodeDisplacementVector, beamDisplacementVector = self._getDisplacementVectors(modeNumber)
     import time
     startTimeSeconds = time.time()
     minFPS = 25
@@ -130,15 +127,30 @@ class SimpleView():
       time.sleep(max(1/minFPS - (time.time() - currentTimeSeconds), 0))
     self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, 0)
 
+  def displayModeShape(self, modeNumber:int = 0) -> None:
+    nodeDisplacementVector, beamDisplacementVector = self._getDisplacementVectors(modeNumber)
+    displacementFactor = 1/max(self.ModeShapes[:, modeNumber])*500*4
+    self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, displacementFactor)
+
+  def displayUndeformed(self):
+    nodeDisplacementVector, beamDisplacementVector = self._getDisplacementVectors(0)
+    self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, 0)
+    
   def start(self):
-    self.add_menu("Mode")
-    self.add_function_to_menu("Mode", self.displayUndeformed)
+    self.add_menu("Mode Shapes")
+    self.add_function_to_menu("Mode Shapes", self.displayUndeformed)
     if not self.ModeShapes is None:
       for i in range(self.ModeShapes.shape[1]):
         _callback = (lambda _:lambda:self.displayModeShape(_))(i)
         _callback.__name__ = self.ModeShapeTags[i] if not self.ModeShapeTags is None else f"Mode {i+1}"
-        self.add_function_to_menu("Mode", _callback)
-    self.displayUndeformed()
+        self.add_function_to_menu("Mode Shapes", _callback)
+
+    self.add_menu("Mode Shapes Animated")
+    if not self.ModeShapes is None:
+      for i in range(self.ModeShapes.shape[1]):
+        _callback = (lambda _:lambda:self.displayModeShapeAnimated(_))(i)
+        _callback.__name__ = self.ModeShapeTags[i] if not self.ModeShapeTags is None else f"Mode {i+1}"
+        self.add_function_to_menu("Mode Shapes Animated", _callback)
     self.start_display()
 
   @staticmethod
