@@ -119,7 +119,7 @@ class Beam:
     while index < len(self.childBeams) and dist > self.childBeams[index].L:
       dist -= self.childBeams[index].L
       index += 1
-    if dist > 0 and index < len(self.childBeams):
+    if dist >= 0 and index < len(self.childBeams):
       self.childBeams[index].addPointLoad(dir, np.array([val]), np.array([dist]), loadCases)
 
   def addSelfWeight(self, dir:int, factor:float, loadCases:list[int]) -> None:
