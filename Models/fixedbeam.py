@@ -158,15 +158,15 @@ class FixedBeam:
       forcel[0] -= val*(1 - dist/self.L)
       forcel[6] -= val*dist/self.L
     elif dir == 1:
-      forcel[1] -= val*(1 - dist/self.L)
-      forcel[7] -= val*dist/self.L
       a, b = dist, self.L - dist
+      forcel[1] -= val*b**2*(3*a+b)/self.L**3
+      forcel[7] -= val*a**2*(a+3*b)/self.L**3
       forcel[5] -= val*a*b**2/self.L**2
       forcel[11] += val*b*a**2/self.L**2
     elif dir == 2:
-      forcel[2] -= val*(1 - dist/self.L)
-      forcel[8] -= val*dist/self.L
       a, b = dist, self.L - dist
+      forcel[2] -= val*b**2*(3*a+b)/self.L**3
+      forcel[8] -= val*a**2*(a+3*b)/self.L**3
       forcel[4] += val*a*b**2/self.L**2
       forcel[10] -= val*b*a**2/self.L**2
     self.addLocalFEForce(forcel, loadCases)
