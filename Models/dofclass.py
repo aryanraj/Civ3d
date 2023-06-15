@@ -192,20 +192,15 @@ class DOFClass():
     return displacement, reaction
 
   @classmethod
-  def analyse(cls, subDomainDOFids:list[int]=range(MAX_DOF), loadCaseSubsets=range(MAX_LOADCASE)) -> npt.NDArray[np.float64]:
+  def _getSubDomainParameters(cls, subDomainMask:npt.NDArray[np.bool_], loadCaseMask:npt.NDArray[np.bool_]) -> tuple[sp.lil_array, sp.lil_array, sp.lil_array, sp.lil_array, sp.lil_array]:
     constraintMatrix = cls.generateConstraintMatrix()
     stiffnessMatrix = cls.StiffnessMatrix
     
-    subDomainMask = np.zeros((MAX_DOF,), dtype=np.bool_)
-    subDomainMask[subDomainDOFids] = True
-    loadCaseMask = np.zeros((MAX_LOADCASE,), dtype=np.bool_)
-    loadCaseMask[loadCaseSubsets] = True
-
     constraintMatrixSubDomain = constraintMatrix[np.ix_(subDomainMask, subDomainMask)]
     stiffnessMatrixSubDomain = stiffnessMatrix[np.ix_(subDomainMask, subDomainMask)]
-    imbalancedDisplacementVectorSubDomain = cls.ImbalancedDisplacementVector[np.ix_(subDomainMask, loadCaseSubsets)]
-    imbalancedActionVectorSubDomain = cls.ImbalancedActionVector[np.ix_(subDomainMask, loadCaseSubsets)]
-    restraintVectorSubDomain:sp.lil_array = cls.RestraintVector[np.ix_(subDomainMask, [0])]
+    imbalancedDisplacementVectorSubDomain = cls.ImbalancedDisplacementVector[np.ix_(subDomainMask, loadCaseMask)]
+    imbalancedActionVectorSubDomain = cls.ImbalancedActionVector[np.ix_(subDomainMask, loadCaseMask)]
+    restraintVectorSubDomain = cls.RestraintVector[np.ix_(subDomainMask, [0])]
 
     # Checking if the subDomain DOFs have coupling outside the subDomain
     # Checking Coupling in ConstraintMatrix
@@ -216,8 +211,17 @@ class DOFClass():
     + (stiffnessMatrix[np.ix_(subDomainMask, ~subDomainMask)] != 0).sum(axis=1) \
     + (stiffnessMatrix[np.ix_(~subDomainMask, subDomainMask)] != 0).sum(axis=0)
     ).astype(bool).reshape(restraintVectorSubDomain.shape)
-    
-    displacementSubDomain, reactionSubDomain = cls._analyseSubDomain(constraintMatrixSubDomain, stiffnessMatrixSubDomain, restraintVectorSubDomain, imbalancedDisplacementVectorSubDomain, imbalancedActionVectorSubDomain)
+
+    return constraintMatrixSubDomain, stiffnessMatrixSubDomain, restraintVectorSubDomain, imbalancedDisplacementVectorSubDomain, imbalancedActionVectorSubDomain 
+
+  @classmethod
+  def analyse(cls, subDomainDOFids:list[int]=range(MAX_DOF), loadCaseSubsets:list[int]=range(MAX_LOADCASE)) -> npt.NDArray[np.float64]:
+    subDomainMask = np.zeros((MAX_DOF,), dtype=np.bool_)
+    subDomainMask[subDomainDOFids] = True
+    loadCaseMask = np.zeros((MAX_LOADCASE,), dtype=np.bool_)
+    loadCaseMask[loadCaseSubsets] = True
+
+    displacementSubDomain, reactionSubDomain = cls._analyseSubDomain(*cls._getSubDomainParameters(subDomainMask, loadCaseMask))
     displacement = sp.lil_array(cls.DisplacementVector.shape, dtype=np.float64)
     displacement[np.ix_(subDomainMask, loadCaseMask)] = displacementSubDomain
     reaction = sp.lil_array(cls.ReactionVector.shape, dtype=np.float64)
