@@ -203,7 +203,7 @@ if __name__ == "__main__":
   structure = Structure3D()
   structure.setMassFactor(1.0)
   structure.addSelfWeight(2, -1, [0])
-  DOFClass.analyse()
+  DOFClass.analyse(range(len(DOFClass.DOFList)), [0])
 
   np.set_printoptions(suppress=True) # To suppress exponential notation
   print("Static Analysis Results")
