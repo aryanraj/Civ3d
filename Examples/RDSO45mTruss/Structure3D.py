@@ -214,7 +214,7 @@ if __name__ == "__main__":
   print(structure.truss2.node_by_name("L0").getReaction([0]).flatten())
 
   print("**** Full Fixity ****")
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50, range(len(DOFClass.DOFList)))
   T = 2*np.pi/D**0.5
   print(f"Eigenvalue Analysis Results with Full Fixity")
   print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
@@ -224,7 +224,7 @@ if __name__ == "__main__":
   print("**** Adding Releases in longitudinal directions ****")
   longitudinalFixityFactor = 0.01
   structure.setFixityFactorForLongitudinalActions(longitudinalFixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50, range(len(DOFClass.DOFList)))
   T = 2*np.pi/D**0.5
   print(f"Eigenvalue Analysis Results with {longitudinalFixityFactor=}")
   print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
@@ -235,13 +235,27 @@ if __name__ == "__main__":
   print("**** Adding Releases in transverse directions ****")
   transverseFixityFactor = 0.01
   structure.setFixityFactorForTransverseActions(transverseFixityFactor)
-  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50)
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(50, range(len(DOFClass.DOFList)))
   T = 2*np.pi/D**0.5
   print(f"Eigenvalue Analysis Results with {transverseFixityFactor=}")
   print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
   for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
     print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
   structure.setFixityFactorForTransverseActions(0, True)
+
+  print("**** Stringer Assembly only ****")
+  DOFList = []
+  for beam in structure.stringers:
+    DOFList.extend(sum([_.DOF for _ in beam.nodes], []))
+  for beam in structure.cross_girders:
+    DOFList.extend(sum([_.DOF for _ in beam.nodes], []))
+  DOFListids = [_.id for _ in DOFList]
+  D,V,EffectiveMass,MassParticipationFactor = DOFClass.eig(300, DOFListids)
+  T = 2*np.pi/D**0.5
+  print(f"Eigenvalue Analysis Results")
+  print("No.\tTime\tFreq.:\tDX\tDY\tDZ\tRX\tRY\tRz")
+  for i, (_T,_MP) in enumerate(zip(T, MassParticipationFactor*100)):
+    print(f"{i+1}\t{_T:.3f}\t{1/_T:.2f}:\t"+''.join([f"{_:.2f}\t" for _ in _MP]))
 
   # Display
   ModeShapes = V

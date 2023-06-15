@@ -22,13 +22,18 @@ class StringerAssembly:
 
     self.cross:list[Beam] = []
     self.cross.append(Beam([self.main[0].nodes[1], self.main[1].nodes[1]], sections["StringerCross"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.nodes.extend(self.cross[-1].nodes)
     self.cross.append(Beam([self.main[0].nodes[2], self.main[1].nodes[2]], sections["StringerCross"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.nodes.extend(self.cross[-1].nodes)
     self.beams.extend(self.cross)
 
     self.lateral:list[Beam] = []
     self.lateral.append(Beam([self.main[0].nodes[0], self.main[1].nodes[1]], sections["StringerLateralBracing"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.nodes.extend(self.lateral[-1].nodes)
     self.lateral.append(Beam([self.main[1].nodes[1], self.main[0].nodes[2]], sections["StringerLateralBracing"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.nodes.extend(self.lateral[-1].nodes)
     self.lateral.append(Beam([self.main[0].nodes[2], self.main[1].nodes[3]], sections["StringerLateralBracing"], constraintsA=[1,1,1,1,0,0], constraintsB=[1,1,1,1,0,0]))
+    self.nodes.extend(self.lateral[-1].nodes)
     self.beams.extend(self.lateral)
 
 if __name__ == "__main__":

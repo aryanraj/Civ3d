@@ -148,7 +148,7 @@ class DOFClass():
     self.MassMatrix[np.ix_([_.id for _ in DOFs],[_.id for _ in DOFs])] += M
 
   @staticmethod
-  def _analyseSubDomain(constraintMatrix:sp.lil_array, stiffnessMatrix:sp.lil_array, restraintVector:sp.lil_array, displacement:sp.lil_array, action:sp.lil_array):
+  def _analyseSubDomain(stiffnessMatrix:sp.lil_array, massMatrix:sp.lil_array, constraintMatrix:sp.lil_array, restraintVector:sp.lil_array, displacement:sp.lil_array, action:sp.lil_array):
     Kg = constraintMatrix.T @ stiffnessMatrix @ constraintMatrix
     displacement = constraintMatrix @ displacement
     constrainedAction = constraintMatrix.T @ action
@@ -192,14 +192,14 @@ class DOFClass():
     return displacement, reaction
 
   @classmethod
-  def _getSubDomainParameters(cls, subDomainMask:npt.NDArray[np.bool_], loadCaseMask:npt.NDArray[np.bool_]) -> tuple[sp.lil_array, sp.lil_array, sp.lil_array, sp.lil_array, sp.lil_array]:
+  def _getSubDomainStructureParameters(cls, subDomainMask:npt.NDArray[np.bool_]) -> tuple[sp.lil_array, sp.lil_array, sp.lil_array, sp.lil_array]:
     constraintMatrix = cls.generateConstraintMatrix()
     stiffnessMatrix = cls.StiffnessMatrix
+    massMatrix = cls.MassMatrix
     
-    constraintMatrixSubDomain = constraintMatrix[np.ix_(subDomainMask, subDomainMask)]
     stiffnessMatrixSubDomain = stiffnessMatrix[np.ix_(subDomainMask, subDomainMask)]
-    imbalancedDisplacementVectorSubDomain = cls.ImbalancedDisplacementVector[np.ix_(subDomainMask, loadCaseMask)]
-    imbalancedActionVectorSubDomain = cls.ImbalancedActionVector[np.ix_(subDomainMask, loadCaseMask)]
+    massMatrixSubDomain = massMatrix[np.ix_(subDomainMask, subDomainMask)]
+    constraintMatrixSubDomain = constraintMatrix[np.ix_(subDomainMask, subDomainMask)]
     restraintVectorSubDomain = cls.RestraintVector[np.ix_(subDomainMask, [0])]
 
     # Checking if the subDomain DOFs have coupling outside the subDomain
@@ -212,21 +212,35 @@ class DOFClass():
     + (stiffnessMatrix[np.ix_(~subDomainMask, subDomainMask)] != 0).sum(axis=0)
     ).astype(bool).reshape(restraintVectorSubDomain.shape)
 
-    return constraintMatrixSubDomain, stiffnessMatrixSubDomain, restraintVectorSubDomain, imbalancedDisplacementVectorSubDomain, imbalancedActionVectorSubDomain 
+    return stiffnessMatrixSubDomain, massMatrixSubDomain, constraintMatrixSubDomain, restraintVectorSubDomain
+
+  @classmethod
+  def _getSubDomainDisplacementAction(cls, subDomainMask:npt.NDArray[np.bool_], loadCaseMask:npt.NDArray[np.bool_]) -> tuple[sp.lil_array, sp.lil_array]:
+    imbalancedDisplacementVectorSubDomain = cls.ImbalancedDisplacementVector[np.ix_(subDomainMask, loadCaseMask)]
+    imbalancedActionVectorSubDomain = cls.ImbalancedActionVector[np.ix_(subDomainMask, loadCaseMask)]
+    return imbalancedDisplacementVectorSubDomain, imbalancedActionVectorSubDomain
 
   @classmethod
   def analyse(cls, subDomainDOFids:list[int]=range(MAX_DOF), loadCaseSubsets:list[int]=range(MAX_LOADCASE)) -> npt.NDArray[np.float64]:
+    # Creating Mask for SubDomain
     subDomainMask = np.zeros((MAX_DOF,), dtype=np.bool_)
     subDomainMask[subDomainDOFids] = True
     loadCaseMask = np.zeros((MAX_LOADCASE,), dtype=np.bool_)
     loadCaseMask[loadCaseSubsets] = True
 
-    displacementSubDomain, reactionSubDomain = cls._analyseSubDomain(*cls._getSubDomainParameters(subDomainMask, loadCaseMask))
+    # Analysing the subdomain
+    displacementSubDomain, reactionSubDomain = cls._analyseSubDomain(
+      *cls._getSubDomainStructureParameters(subDomainMask),
+      *cls._getSubDomainDisplacementAction(subDomainMask, loadCaseMask),
+      )
+
+    # Recasting the dispalcement and reaction from subdomain to global
     displacement = sp.lil_array(cls.DisplacementVector.shape, dtype=np.float64)
     displacement[np.ix_(subDomainMask, loadCaseMask)] = displacementSubDomain
     reaction = sp.lil_array(cls.ReactionVector.shape, dtype=np.float64)
     reaction[np.ix_(subDomainMask, loadCaseMask)] = reactionSubDomain
 
+    # Storing the values for displacements and reaction in global domain
     cls.DisplacementVector += displacement
     cls.ReactionVector += reaction
     cls.ImbalancedDisplacementVector[np.ix_(subDomainMask, loadCaseMask)] = 0
@@ -241,20 +255,19 @@ class DOFClass():
     cls.ImbalancedActionVector[:,:] = 0
     cls.ImbalancedDisplacementVector[:,:] = 0
 
-  @classmethod
-  def eig(cls, nModes) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-    ConstraintMatrix = cls.generateConstraintMatrix()
-    Kg = ConstraintMatrix.T @ cls.StiffnessMatrix @ ConstraintMatrix
-    Mg = ConstraintMatrix.T @ cls.MassMatrix @ ConstraintMatrix
-    EigenVectors = sp.lil_matrix((ConstraintMatrix.shape[0], nModes))
+  @staticmethod
+  def _eigSubDomain(nModes:int, DOFList:list[DOFClass], stiffnessMatrix:sp.lil_array, massMatrix:sp.lil_array, constraintMatrix:sp.lil_array, restraintVector:sp.lil_array) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    Kg = constraintMatrix.T @ stiffnessMatrix @ constraintMatrix
+    Mg = constraintMatrix.T @ massMatrix @ constraintMatrix
+    EigenVectors = sp.lil_matrix((constraintMatrix.shape[0], nModes))
 
     # Mask for all the DOFs which are not restraints
-    mask = ~cls.RestraintVector.toarray().flatten()
+    mask = ~restraintVector.toarray().flatten()
 
     # Filter out DOFs which have zero stiffness
     # TODO: Fix this part using LU_factor and LU_solve
     for i, _Kg in zip(range(len(mask)), Kg):
-      if cls.RestraintVector[i,0]: continue
+      if restraintVector[i,0]: continue
       if np.all(_Kg.toarray() == 0):
         mask[i] = False
     
@@ -264,15 +277,34 @@ class DOFClass():
       M11 = Mg[np.ix_(mask, mask)]
       EigenValues,V = splinalg.eigsh(K11, nModes, M11, sigma=0)
       # TODO: Check implementation for rotational DOFs
-      DispDirMatrix = np.array([list(_.dir) + [0]*3 if _.represents is DOFTypes.DISPLACEMENT else [0]*3 + list(_.dir) for _ in cls.DOFList if mask[_.id]])
+      DispDirMatrix = np.array([list(DOF.dir) + [0]*3 if DOF.represents is DOFTypes.DISPLACEMENT else [0]*3 + list(DOF.dir) for DOF, DOFmask in zip(DOFList, mask) if DOFmask])
       ParticipationFactor = V.T @ M11 @ DispDirMatrix
       EffectiveMass = ParticipationFactor**2
       TotalMass = np.diag(DispDirMatrix.T @ M11 @ DispDirMatrix)
       MassParticipationFactor = EffectiveMass/TotalMass
       EigenVectors[mask,:] = V
-      EigenVectors = ConstraintMatrix @ EigenVectors
+      EigenVectors = constraintMatrix @ EigenVectors
 
-    return EigenValues, EigenVectors.todense(), EffectiveMass, MassParticipationFactor
+    return EigenValues, EigenVectors, EffectiveMass, MassParticipationFactor
+
+  @classmethod
+  def eig(cls, nModes:int, subDomainDOFids:list[int]=range(MAX_DOF)) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    # Creating Mask for SubDomain
+    subDomainMask = np.zeros((MAX_DOF,), dtype=np.bool_)
+    subDomainMask[subDomainDOFids] = True
+
+    # Analysing the subdomain
+    EigenValues, EigenVectorsSubDomain, EffectiveMass, MassParticipationFactor = cls._eigSubDomain(
+      nModes,
+      [DOF for DOF, condition in zip(cls.DOFList, subDomainMask) if condition],
+      *cls._getSubDomainStructureParameters(subDomainMask),
+      )
+
+    # Recasting the dispalcement and reaction from subdomain to global
+    EigenVectors = np.zeros((MAX_DOF, nModes), dtype=np.float64)
+    EigenVectors[subDomainMask, :] = EigenVectorsSubDomain.todense()
+
+    return EigenValues, EigenVectors, EffectiveMass, MassParticipationFactor
 
   @classmethod
   def analyseTimeHistory(cls, dt:float, eigenValues:npt.NDArray[np.float64], eigenVectors:npt.NDArray[np.float64], dampingRatios:npt.NDArray[np.float64]) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
