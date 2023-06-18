@@ -8,6 +8,7 @@ os.environ["MAX_LOADCASE"] = str(MAX_LOADCASE)
 
 from Models import DOFClass, Node, BeamSection, Beam
 import numpy as np
+import scipy.sparse as sp
 import matplotlib.pyplot as plt
 
 x = np.linspace(0,MAX_LOAD_DISTANCE, MAX_LOADCASE)
@@ -81,5 +82,29 @@ performTimeHistoryAnalysis(100)
 performTimeHistoryAnalysis(160)
 performTimeHistoryAnalysis(200)
 performTimeHistoryAnalysis(400)
+plt.legend()
+plt.show()
+
+# Calculation using oscilating loads
+performTimeHistoryAnalysis(0.01)
+performTimeHistoryAnalysis(70)
+nonOscillatingLoad = DOFClass.ImbalancedActionVector.copy()
+DOFClass.resetAllActionsAndReactions()
+
+def performTimeHistoryAnalysisOscilatingLoad(speed_kmph):
+  oscilatingFreqHz = 1
+  oscilatingPercentage = 0.1
+  speed_mps = speed_kmph/3.6
+  dt = MAX_LOAD_DISTANCE/speed_mps/(MAX_LOADCASE-1)
+  oscillatingFactor = 1 + oscilatingPercentage * np.sin(2 * np.pi * oscilatingFreqHz * np.arange(MAX_LOADCASE)*dt)
+  oscillatingLoad = nonOscillatingLoad.copy() @ sp.diags([oscillatingFactor],[0])
+  DOFClass.ImbalancedActionVector = oscillatingLoad
+  timeHistoryDisplacementVector, timeHistoryVelocityVector, timeHistoryAccelerationVector = DOFClass.analyseTimeHistory(dt, eigenValues, eigenVectors, dampingRatios)
+  midSpanMaxDisplacement = np.min(timeHistoryDisplacementVector[n2.DOF[2].id,:])
+  print(f"Maximum displacement @ midspan for {speed_kmph}kmph speed case is {midSpanMaxDisplacement}")
+  plt.plot(x, timeHistoryDisplacementVector[n2.DOF[2].id,:], label=f"Os {speed_kmph} kmph")
+  DOFClass.resetAllActionsAndReactions()
+
+performTimeHistoryAnalysisOscilatingLoad(70)
 plt.legend()
 plt.show()
