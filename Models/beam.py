@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Union
+from typing import Union, TypedDict
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass, field, InitVar
+import bisect
 from . import DOFClass, Node, BeamSection, FixedBeam
 from . import utils
 
@@ -147,5 +148,37 @@ class Beam:
     while index < len(beamList) and dist > (beamLength := sum([_.L for _ in beamList[index].childBeams])):
       dist -= beamLength
       index += 1
-    if dist > 0 and index < len(beamList):
+    if dist >= 0 and index < len(beamList):
       beamList[index].addPointLoad(dir, val, dist, loadCases)
+
+  @staticmethod
+  def addMovingPointLoadsToBeamList(beamList:list[Beam], dir:int, wheelLoadList:list[float], wheelStartingDistList:list[float], wheelDistIncrement:float, loadCases:list[int]) -> None:
+    for beamIndex, (beam1, beam2) in enumerate(zip(beamList[:-1], beamList[1:])):
+      if np.linalg.norm(beam1.nodes[-1].coord - beam2.nodes[0].coord) > 10 * np.finfo(np.float64).eps:
+        raise Exception(f"The beam ends are discontinuous after beam at {beamIndex=}")
+    
+    nLoadCases = len(loadCases)
+    childBeamDataType = TypedDict('childBeamData', beam=FixedBeam, load=npt.NDArray[np.float64], loadDist=npt.NDArray[np.float64])
+    childBeamDataList:list[childBeamDataType] = []
+    childBeamDistList:list[float] = [0]
+    
+    for beam in beamList:
+      for childBeam in beam.childBeams:
+        childBeamDistList.append(0 if len(childBeamDistList) == 0 else childBeamDistList[-1] + childBeam.L)
+        childBeamDataList.append({
+          "beam": childBeam,
+          "load": np.zeros(nLoadCases),
+          "loadDist": np.zeros(nLoadCases),
+        })
+    nChildBeam = len(childBeamDataList)
+
+    for wheelLoad, wheelStartingDist in zip(wheelLoadList, wheelStartingDistList):
+      for loadIndex in range(len(loadCases)):
+        wheelDist = wheelStartingDist + wheelDistIncrement * loadIndex
+        childBeamIndex = bisect.bisect_left(childBeamDistList, wheelDist) - 1 if wheelDist != 0. else 0
+        if childBeamIndex >= 0 and childBeamIndex < nChildBeam:
+          childBeamDataList[childBeamIndex]["loadDist"][loadIndex] = wheelDist - childBeamDistList[childBeamIndex]
+          childBeamDataList[childBeamIndex]["load"][loadIndex] = wheelLoad
+
+    for childBeamData in childBeamDataList:
+      childBeamData["beam"].addPointLoad(dir, childBeamData["load"], childBeamData["loadDist"], loadCases)
