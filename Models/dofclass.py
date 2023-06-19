@@ -275,7 +275,10 @@ class DOFClass():
     if np.any(mask):
       K11 = Kg[np.ix_(mask, mask)]
       M11 = Mg[np.ix_(mask, mask)]
-      EigenValues,V = splinalg.eigsh(K11, nModes, M11, sigma=0)
+      if nModes == K11.shape[0]:
+        EigenValues,V = splinalg.eigsh(K11.toarray(), nModes, M11.toarray(), sigma=0)
+      else:
+        EigenValues,V = splinalg.eigsh(K11, nModes, M11, sigma=0)
       # TODO: Check implementation for rotational DOFs
       DispDirMatrix = np.array([list(DOF.dir) + [0]*3 if DOF.represents is DOFTypes.DISPLACEMENT else [0]*3 + list(DOF.dir) for DOF, DOFmask in zip(DOFList, mask) if DOFmask])
       ParticipationFactor = V.T @ M11 @ DispDirMatrix
