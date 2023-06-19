@@ -56,10 +56,14 @@ vehicleAxleLoadDistance:list[tuple[float,float]] = [
   (199167.525, 87.393),
 ]
 
-for id, distance in enumerate(np.linspace(0,MAX_LOAD_DISTANCE,MAX_LOADCASE).tolist()):
-  for axleLoad, axleOffset in vehicleAxleLoadDistance:
-    b1.addPointLoad(2, -axleLoad/2/9.806, distance-axleOffset, [id])
-
+Beam.addMovingPointLoadsToBeamList(
+  [b1],
+  2,
+  [-_[0]/2/9.806 for _ in vehicleAxleLoadDistance],
+  [-_[1] for _ in vehicleAxleLoadDistance],
+  MAX_LOAD_DISTANCE/(MAX_LOADCASE-1),
+  list(range(MAX_LOADCASE)),
+  )
 
 print("** Eigenvalue Analysis **")
 eigenValues, eigenVectors, effectiveMass, massParticipationFactor = DOFClass.eig(N_MODES)
@@ -70,7 +74,8 @@ def performTimeHistoryAnalysis(speed_kmph):
   dt = MAX_LOAD_DISTANCE/speed_mps/(MAX_LOADCASE-1)
   timeHistoryDisplacementVector, timeHistoryVelocityVector, timeHistoryAccelerationVector = DOFClass.analyseTimeHistory(dt, eigenValues, eigenVectors, dampingRatios)
   midSpanMaxDisplacement = np.min(timeHistoryDisplacementVector[n2.DOF[2].id,:])
-  print(f"Maximum displacement @ midspan for {speed_kmph}kmph speed case is {midSpanMaxDisplacement}")
+  newmark, _, _ = DOFClass.analyseTimeHistoryNewmark(dt, eigenValues, eigenVectors, dampingRatios)
+  print(f"Maximum displacement @ midspan for {speed_kmph}kmph speed case is {midSpanMaxDisplacement} : Newmark {np.min(newmark[n2.DOF[2].id,:])}")
   plt.plot(x, timeHistoryDisplacementVector[n2.DOF[2].id,:], label=f"{speed_kmph} kmph")
 
 print("** Time History Analysis **")

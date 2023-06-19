@@ -320,6 +320,19 @@ class DOFClass():
     return eigenVectors @ modalDisplacementVector, eigenVectors @ modalVelocityVector, eigenVectors @ modalAccelerationVector
 
   @classmethod
+  def analyseTimeHistoryNewmark(cls, dt:float, eigenValues:npt.NDArray[np.float64], eigenVectors:npt.NDArray[np.float64], dampingRatios:npt.NDArray[np.float64], Bita:float=1./4, Gamma:float=1./2) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    eigenValues = utils.ensure1DNumpyArray(eigenValues, np.float64)
+    dampingRatios = utils.ensure1DNumpyArray(dampingRatios, np.float64)
+
+    from .dynamicAnalysis import generateTimeHistoryNewmark
+    ConstraintMatrix = cls.generateConstraintMatrix()
+    constrainedAction = ConstraintMatrix.T @ cls.ImbalancedActionVector
+    modalLoadVector = eigenVectors.T @ constrainedAction
+    omegas = eigenValues**0.5
+    modalDisplacementVector, modalVelocityVector, modalAccelerationVector = generateTimeHistoryNewmark(modalLoadVector, dt, omegas, dampingRatios, Bita, Gamma)
+    return eigenVectors @ modalDisplacementVector, eigenVectors @ modalVelocityVector, eigenVectors @ modalAccelerationVector
+
+  @classmethod
   def getDisplacementVector(cls, loadCases:list[int]) -> npt.NDArray[np.float64]:
     warnings.warn("Calling todense() on DisplacementVector is very costly")
     return cls.DisplacementVector[:, loadCases].todense()
