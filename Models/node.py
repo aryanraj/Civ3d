@@ -116,3 +116,10 @@ class Node:
   
   def getDisplacement(self, loadCases:list[int]) -> npt.NDArray[np.float64]:
     return np.vstack([_.displacement(loadCases) for _ in self.DOF])
+
+  @classmethod
+  def linspace(cls, coord1:npt.NDArray[np.float64], coord2:npt.NDArray[np.float64], n:int, restraint:npt.NDArray[np.bool_]=np.zeros((6,), np.bool_)) -> list[Node]:
+    coord1 = utils.ensure1DNumpyArray(coord1, np.float64)
+    coord2 = utils.ensure1DNumpyArray(coord2, np.float64)
+    restraint = utils.ensure1DNumpyArray(restraint, np.bool_)
+    return [cls(coord1 * (1-_) + coord2 * _, restraint) for _ in np.linspace(0, 1, n)]
