@@ -122,14 +122,14 @@ class SimpleView():
     totalDurationSeconds = 4.0
     while (currentTimeSeconds:=time.time()) - startTimeSeconds < totalDurationSeconds:
       phaseDegree = 360*(currentTimeSeconds - startTimeSeconds)/totalDurationSeconds
-      displacementFactor = np.sin(np.radians(phaseDegree))*1/max(self.ModeShapes[:, modeNumber])*500*4
+      displacementFactor = np.sin(np.radians(phaseDegree))*1/max(np.abs(self.ModeShapes[:, modeNumber]))*500*4
       self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, displacementFactor)
       time.sleep(max(1/minFPS - (time.time() - currentTimeSeconds), 0))
     self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, 0)
 
   def displayModeShape(self, modeNumber:int = 0) -> None:
     nodeDisplacementVector, beamDisplacementVector = self._getDisplacementVectors(modeNumber)
-    displacementFactor = 1/max(self.ModeShapes[:, modeNumber])*500*4
+    displacementFactor = 1/max(np.abs(self.ModeShapes[:, modeNumber]))*500*4
     self.displayDeformed(nodeDisplacementVector, beamDisplacementVector, displacementFactor)
 
   def displayUndeformed(self):
