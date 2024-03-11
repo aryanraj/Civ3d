@@ -32,4 +32,8 @@ conda develop /path/to/root/of/package
 # Examples
 Currently there are two examples in the `Examples/` folder which shows different work cases for this project.
 
+## Youtube Demo
+
+[![Watch the video](https://img.youtube.com/vi/bYnnUCpzAnI/maxresdefault.jpg)](https://youtu.be/bYnnUCpzAnI)
+
 > **_NOTE:_** This README is incomplete, requires a wiki page to go into in depth information about the analysis modules.
